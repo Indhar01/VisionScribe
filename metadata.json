@@ -1,0 +1,10 @@
+{
+  "name": "VisionScribe",
+  "description": "Industrial inspection journal with automated Gemini Non-Conformance Report (NCR) generation, defect severity classification, and isolated Firestore persistence.",
+  "requestFramePermissions": [
+    "camera"
+  ],
+  "majorCapabilities": [
+    "MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"
+  ]
+}
