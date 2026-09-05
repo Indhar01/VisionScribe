@@ -10,6 +10,7 @@ import {
 import { db } from "../firebase/config";
 import { InspectionRecord, ChatMessage, WorkOrderTicket } from "../types/inspection";
 import { sanitizePayload } from "../utils/sanitize";
+import { logAuditEvent } from "../utils/auditLogger";
 
 /**
  * Returns the collection reference for a user's isolated inspections
@@ -75,6 +76,23 @@ export async function saveInspectionRecord(
   const docRef = doc(db, "users", userId, "inspections", inspection.id);
   const cleanData = sanitizePayload(inspection);
   await setDoc(docRef, cleanData);
+
+  // Log audit event
+  await logAuditEvent(
+    userId,
+    'INSPECTION_CREATED',
+    'inspection',
+    inspection.id,
+    {
+      machineryPart: inspection.machineryPart,
+      subsystem: inspection.subsystem,
+      ncrReportNumber: inspection.ncr.reportNumber,
+      severityScore: inspection.ncr.severityScore,
+      confidenceScore: inspection.ncr.confidenceScore,
+      ataChapter: inspection.ncr.ataChapter,
+    },
+    inspection.ncr.severityScore >= 4 ? 'WARNING' : 'INFO'
+  );
 }
 
 /**
@@ -138,4 +156,20 @@ export async function dispatchWorkOrderForInspection(
   });
 
   await updateDoc(docRef, payload);
+
+  // Log audit event for work order dispatch
+  await logAuditEvent(
+    userId,
+    'WORK_ORDER_DISPATCHED',
+    'work_order',
+    workOrder.trackingId,
+    {
+      inspectionId,
+      priority: workOrder.priority,
+      assignedTeam: workOrder.assignedTeam,
+      estimatedLeadTime: workOrder.estimatedLeadTime,
+      dispatchedBy: workOrder.dispatchedBy,
+    },
+    workOrder.priority === 'CRITICAL' ? 'CRITICAL' : 'INFO'
+  );
 }

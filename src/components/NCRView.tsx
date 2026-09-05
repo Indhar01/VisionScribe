@@ -25,7 +25,9 @@ import {
   Clock,
   ShieldAlert,
   Send,
+  Eye,
 } from "lucide-react";
+import { exportAuditTrail } from "../utils/auditLogger";
 
 interface NCRViewProps {
   ncr: NonConformanceReport;
@@ -35,6 +37,9 @@ interface NCRViewProps {
   record?: InspectionRecord | null;
   onDispatchWorkOrder?: () => Promise<void> | void;
   isDispatching?: boolean;
+  onVerifyInspection?: (approved: boolean) => Promise<void> | void;
+  verificationNotes?: string;
+  onVerificationNotesChange?: (notes: string) => void;
 }
 
 export const NCRView: React.FC<NCRViewProps> = ({
@@ -45,10 +50,14 @@ export const NCRView: React.FC<NCRViewProps> = ({
   record,
   onDispatchWorkOrder,
   isDispatching = false,
+  onVerifyInspection,
+  verificationNotes = "",
+  onVerificationNotesChange,
 }) => {
   const [copied, setCopied] = useState(false);
   const [copiedWo, setCopiedWo] = useState(false);
   const [showExportMenu, setShowExportMenu] = useState(false);
+  const [isVerifying, setIsVerifying] = useState(false);
   const exportMenuRef = useRef<HTMLDivElement>(null);
 
   const workOrder = record?.workOrder;
@@ -233,6 +242,28 @@ ${(ncr.standardsReferenced || []).join(", ")}
     window.print();
   };
 
+  const handleExportAuditTrail = () => {
+    const auditTrail = exportAuditTrail();
+    const exportData = {
+      reportNumber: ncr.reportNumber,
+      exportDate: new Date().toISOString(),
+      totalEvents: auditTrail.length,
+      auditEvents: auditTrail,
+    };
+    const blob = new Blob([JSON.stringify(exportData, null, 2)], {
+      type: "application/json;charset=utf-8",
+    });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement("a");
+    link.href = url;
+    link.download = `NCR-${ncr.reportNumber}-AuditTrail.json`;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    URL.revokeObjectURL(url);
+    setShowExportMenu(false);
+  };
+
   return (
     <div className="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden">
       {/* Top Formal NCR Header */}
@@ -371,6 +402,18 @@ ${(ncr.standardsReferenced || []).join(", ")}
                       <div className="text-[10px] text-slate-400">Machine-readable ERP JSON</div>
                     </div>
                   </button>
+
+                  <button
+                    type="button"
+                    onClick={handleExportAuditTrail}
+                    className="w-full px-3 py-2 text-left hover:bg-slate-50 flex items-center gap-2 cursor-pointer transition font-medium border-t border-slate-100"
+                  >
+                    <Eye className="w-3.5 h-3.5 text-indigo-600 flex-shrink-0" />
+                    <div>
+                      <div>Export Audit Trail</div>
+                      <div className="text-[10px] text-slate-400">Compliance audit log</div>
+                    </div>
+                  </button>
                 </div>
               )}
             </div>
@@ -425,6 +468,39 @@ ${(ncr.standardsReferenced || []).join(", ")}
             <p className="text-[11px] text-slate-400 mt-0.5">
               Identified via optical morphology contour analysis
             </p>
+          </div>
+        </div>
+
+        {/* ATA Chapter & Confidence Display Row */}
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6 pt-4 border-t border-slate-200/80">
+          <div>
+            <label className="block text-[10px] font-bold text-slate-400 uppercase tracking-widest">
+              ATA Chapter Classification
+            </label>
+            <p className="mt-1 text-sm font-semibold text-slate-800">
+              {ncr.ataChapter}
+            </p>
+            <p className="text-[11px] text-slate-600 mt-0.5">
+              {ncr.ataDescription}
+            </p>
+          </div>
+
+          <div>
+            <label className="block text-[10px] font-bold text-slate-400 uppercase tracking-widest">
+              Confidence Assessment
+            </label>
+            <div className="flex items-center mt-2 space-x-1.5">
+              <div className={`inline-flex items-center px-2.5 py-1 rounded text-xs font-bold ${
+                ncr.confidenceScore >= 0.8 ? 'bg-emerald-50 text-emerald-700 border border-emerald-200' :
+                ncr.confidenceScore >= 0.6 ? 'bg-amber-50 text-amber-700 border border-amber-200' :
+                'bg-red-50 text-red-700 border border-red-200'
+              }`}>
+                {ncr.confidenceLabel || 'MEDIUM'}
+              </div>
+              <span className="text-sm font-semibold text-slate-700">
+                {Math.round((ncr.confidenceScore || 0.75) * 100)}%
+              </span>
+            </div>
           </div>
         </div>
       </div>
@@ -531,6 +607,86 @@ ${(ncr.standardsReferenced || []).join(", ")}
                 {workOrder.maintenanceNotes}
               </div>
             )}
+          </div>
+        )}
+
+        {/* Verification Gate for Low Confidence Reports */}
+        {(ncr.confidenceScore || 0.75) < 0.6 && record?.verificationStatus !== 'verified' && (
+          <div className="bg-amber-50 border border-amber-300 rounded-lg p-4 shadow-2xs">
+            <div className="flex items-start gap-3">
+              <ShieldAlert className="w-5 h-5 text-amber-600 flex-shrink-0 mt-0.5" />
+              <div className="flex-1">
+                <div className="flex items-center justify-between mb-3">
+                  <h3 className="text-sm font-bold text-amber-900">
+                    Verification Required - Low Confidence Detection
+                  </h3>
+                  <span className="text-xs font-semibold text-amber-700 bg-amber-100 px-2.5 py-1 rounded">
+                    {Math.round((ncr.confidenceScore || 0.75) * 100)}% Confidence
+                  </span>
+                </div>
+                <p className="text-xs text-amber-800 mb-3">
+                  This inspection was classified with LOW confidence. Please review the analysis carefully and approve or reject before proceeding with work order dispatch.
+                </p>
+
+                {/* Verification Form */}
+                <div className="space-y-3 bg-white/70 p-3 rounded border border-amber-200">
+                  <div>
+                    <label className="block text-[10px] font-bold text-slate-600 uppercase tracking-widest mb-1.5">
+                      Verification Notes
+                    </label>
+                    <textarea
+                      value={verificationNotes}
+                      onChange={(e) => onVerificationNotesChange?.(e.target.value)}
+                      placeholder="Add inspection notes, second opinion details, or approval justification..."
+                      className="w-full text-xs p-2.5 border border-slate-300 rounded bg-white focus:ring-2 focus:ring-amber-400 focus:border-transparent outline-none"
+                      rows={3}
+                    />
+                  </div>
+
+                  {/* Verification Action Buttons */}
+                  <div className="flex gap-2 pt-2">
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setIsVerifying(true);
+                        onVerifyInspection?.(true).finally(() => setIsVerifying(false));
+                      }}
+                      disabled={isVerifying}
+                      className="flex-1 px-3 py-2 bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold rounded transition flex items-center justify-center gap-1.5 disabled:opacity-50 cursor-pointer"
+                      title="Approve this inspection as accurate"
+                    >
+                      <CheckCircle className="w-3.5 h-3.5" />
+                      <span>{isVerifying ? "Approving..." : "Approve & Verify"}</span>
+                    </button>
+
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setIsVerifying(true);
+                        onVerifyInspection?.(false).finally(() => setIsVerifying(false));
+                      }}
+                      disabled={isVerifying}
+                      className="flex-1 px-3 py-2 bg-red-600 hover:bg-red-700 text-white text-xs font-bold rounded transition flex items-center justify-center gap-1.5 disabled:opacity-50 cursor-pointer"
+                      title="Reject this inspection for re-analysis"
+                    >
+                      <AlertOctagon className="w-3.5 h-3.5" />
+                      <span>{isVerifying ? "Rejecting..." : "Reject & Re-Analyze"}</span>
+                    </button>
+                  </div>
+                </div>
+
+                {record?.verificationStatus && (
+                  <div className={`mt-3 p-2 rounded text-xs font-medium ${
+                    record.verificationStatus === 'verified' 
+                      ? 'bg-emerald-100 text-emerald-800 border border-emerald-300'
+                      : 'bg-red-100 text-red-800 border border-red-300'
+                  }`}>
+                    <strong>Status:</strong> {record.verificationStatus === 'verified' ? 'Verified' : 'Rejected'} by {record.verifiedBy} at {record.verifiedAt ? new Date(record.verifiedAt).toLocaleString() : 'N/A'}
+                    {record.verificationNotes && <div className="mt-1 italic">{record.verificationNotes}</div>}
+                  </div>
+                )}
+              </div>
+            </div>
           </div>
         )}
 

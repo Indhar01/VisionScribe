@@ -5,8 +5,21 @@ import { createServer as createViteServer } from "vite";
 import { GoogleGenAI, Type } from "@google/genai";
 import dotenv from "dotenv";
 import zlib from "node:zlib";
+import admin from "firebase-admin";
 
 dotenv.config();
+
+// Initialize Firebase Admin SDK
+let firebaseInitialized = false;
+try {
+  admin.initializeApp({
+    projectId: process.env.FIREBASE_PROJECT_ID,
+  });
+  firebaseInitialized = true;
+  console.log("[Firebase Admin] SDK initialized successfully");
+} catch (err: any) {
+  console.warn("[Firebase Admin] Initialization error (proceeding with development mode):", err?.message);
+}
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -177,6 +190,38 @@ async function startServer() {
   app.use(express.json({ limit: "30mb" }));
   app.use(express.urlencoded({ extended: true, limit: "30mb" }));
 
+  /**
+   * Middleware: Verify Firebase ID Token from Authorization header
+   */
+  async function verifyFirebaseToken(
+    req: express.Request,
+    res: express.Response,
+    next: express.NextFunction
+  ) {
+    if (!firebaseInitialized) {
+      // Development mode: skip verification
+      console.log("[Firebase Auth] Skipping token verification (Firebase not initialized)");
+      return next();
+    }
+
+    const authHeader = req.headers.authorization;
+    if (!authHeader || !authHeader.startsWith("Bearer ")) {
+      return res.status(401).json({ error: "Missing or invalid Authorization header" });
+    }
+
+    const idToken = authHeader.substring(7); // Remove "Bearer " prefix
+
+    try {
+      const decodedToken = await admin.auth().verifyIdToken(idToken);
+      (req as any).firebaseUser = decodedToken;
+      console.log(`[Firebase Auth] Token verified for user: ${decodedToken.uid}`);
+      next();
+    } catch (err: any) {
+      console.error("[Firebase Auth] Token verification failed:", err?.message);
+      return res.status(401).json({ error: "Unauthorized: Invalid or expired token" });
+    }
+  }
+
   // Health check endpoint
   app.get("/api/health", (_req, res) => {
     res.json({
@@ -193,7 +238,7 @@ async function startServer() {
    * Analyzes machinery part defect imagery & inspector notes to output an ISO 9001/AS9100
    * compliant Non-Conformance Report (NCR).
    */
-  app.post("/api/inspect", async (req, res) => {
+  app.post("/api/inspect", verifyFirebaseToken, async (req, res) => {
     try {
       const {
         image,
@@ -218,6 +263,18 @@ You are conducting an optical non-destructive evaluation (NDE) on a machinery pa
 
 You MUST analyze the provided optical telemetry image alongside the inspector's operational field notes, and generate a rigorous, structured Non-Conformance Report (NCR) in strict JSON format.
 
+ATA Chapter Mapping (for aerospace/aviation/industrial standards):
+- ATA 05: Periodic Inspection & Maintenance
+- ATA 07: Engine Air & Exhaust Systems
+- ATA 09: Flight Controls & Hydraulic Systems
+- ATA 11: Power Plant (Engines, Motors, Prime Movers)
+- ATA 12: Auxiliary Power / Fuel Systems
+- ATA 20: Standard Parts & Fasteners
+- ATA 29: Hydraulic Power Systems
+- ATA 30: Pneumatic Systems
+- ATA 32: Landing Gear & Brakes
+- ATA 70: Engine Installation & Mounts
+
 JSON schema specification:
 {
   "reportNumber": "string - Format NCR-YYYYMMDD-XXXX (e.g., NCR-20260904-4891)",
@@ -237,7 +294,11 @@ JSON schema specification:
   "disposition": "string - One of strictly: 'Scrap', 'Rework', 'Repair', 'Use-As-Is', 'Further Engineering Review'",
   "preventiveMeasures": ["string array - 3 to 5 preventative quality control checks, maintenance schedule updates, or design improvements"],
   "standardsReferenced": ["string array - 2 to 4 relevant engineering codes/standards, e.g. 'ISO 10816-3', 'ASME B31.3', 'ASTM E1444', 'AWS D1.1', 'DIN 3990'"],
-  "safetyAdvisory": "string - Critical operator safety warning regarding handling, operational lockdown, or PPE"
+  "safetyAdvisory": "string - Critical operator safety warning regarding handling, operational lockdown, or PPE",
+  "ataChapter": "string - Format ATA XX - Description (e.g., 'ATA 29 - Hydraulic Power Systems')",
+  "ataDescription": "string - One sentence describing how this defect relates to the ATA chapter",
+  "confidenceScore": "number - Between 0.0 and 1.0 indicating your confidence in this assessment (0.0 = very uncertain, 1.0 = very certain). Set to LOW (<0.6) when image is unclear, part is ambiguous, or defect is not clearly visible",
+  "confidenceLabel": "string - One of: 'VERY HIGH', 'HIGH', 'MEDIUM', 'LOW', 'VERY LOW'"
 }
 
 Do NOT wrap the JSON in Markdown code fences if possible, or provide valid parseable JSON only.`;
@@ -247,7 +308,7 @@ Target Subsystem: "${subsystem}".
 Inspector Field Observations: "${notes}".
 Inspector Identity: "${inspectorName}".
 
-Produce the complete Non-Conformance Report JSON with precision.`;
+Produce the complete Non-Conformance Report JSON with precision, including ATA chapter classification and confidence scoring.`;
 
       const { result, modelUsed } = await callGeminiWithFallback(async (ai, model) => {
         return await ai.models.generateContent({
@@ -288,6 +349,10 @@ Produce the complete Non-Conformance Report JSON with precision.`;
       ncrReport.machineryPart = ncrReport.machineryPart || machineryPart;
       ncrReport.severityScore = Math.min(5, Math.max(1, Math.round(Number(ncrReport.severityScore) || 3)));
       ncrReport.disposition = ncrReport.disposition || "Further Engineering Review";
+      ncrReport.ataChapter = ncrReport.ataChapter || "ATA 00 - General / Unclassified";
+      ncrReport.ataDescription = ncrReport.ataDescription || "Defect classification pending ATA cross-reference analysis";
+      ncrReport.confidenceScore = Number(ncrReport.confidenceScore) || 0.75;
+      ncrReport.confidenceLabel = ncrReport.confidenceLabel || (ncrReport.confidenceScore >= 0.8 ? "HIGH" : ncrReport.confidenceScore >= 0.6 ? "MEDIUM" : "LOW");
       ncrReport.inspectedAt = new Date().toISOString();
       ncrReport.modelUsed = modelUsed;
 
@@ -308,7 +373,7 @@ Produce the complete Non-Conformance Report JSON with precision.`;
    * POST /api/chat
    * Interactive multi-turn engineering consultation for a specific inspection.
    */
-  app.post("/api/chat", async (req, res) => {
+  app.post("/api/chat", verifyFirebaseToken, async (req, res) => {
     try {
       const {
         reportSummary = {},

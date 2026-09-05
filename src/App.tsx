@@ -41,6 +41,7 @@ export default function App() {
 
   // Chat states
   const [isSendingChat, setIsSendingChat] = useState(false);
+  const [verificationNotes, setVerificationNotes] = useState("");
 
   // Listen to Firebase Auth state
   useEffect(() => {
@@ -96,11 +97,15 @@ export default function App() {
     try {
       setAnalysisStep("Extracting optical defect morphology & surface contours...");
 
+      // Get Firebase ID token
+      const idToken = await user.getIdToken();
+
       // Call Express server-side endpoint which invokes Gemini 2.5 Flash / 2.0 Flash ladder
       const response = await fetch("/api/inspect", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
+          "Authorization": `Bearer ${idToken}`,
         },
         body: JSON.stringify({
           image: payload.image,
@@ -191,10 +196,16 @@ export default function App() {
         prev ? { ...prev, messages: updatedWithUser } : prev
       );
 
+      // Get Firebase ID token
+      const idToken = await user.getIdToken();
+
       // 2. Call backend /api/chat with full multi-turn context
       const res = await fetch("/api/chat", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: {
+          "Content-Type": "application/json",
+          "Authorization": `Bearer ${idToken}`,
+        },
         body: JSON.stringify({
           reportSummary: selectedInspection.ncr,
           messages: updatedWithUser,
@@ -245,9 +256,42 @@ export default function App() {
     }
   };
 
+  // Handle verification of inspection (for low-confidence reports)
+  const handleVerifyInspection = async (approved: boolean) => {
+    if (!user || !selectedInspection) return;
+    try {
+      const verificationStatus = approved ? 'verified' : 'rejected';
+      const updated: InspectionRecord = {
+        ...selectedInspection,
+        verificationStatus,
+        verifiedBy: user.displayName || user.email || 'Inspector',
+        verifiedAt: new Date().toISOString(),
+        verificationNotes,
+      };
+      
+      // Update in Firestore
+      await saveInspectionRecord(user.uid, updated);
+      setSelectedInspection(updated);
+      setInspections((prev) =>
+        prev.map((r) => (r.id === selectedInspection.id ? updated : r))
+      );
+      setVerificationNotes('');
+    } catch (err) {
+      console.error('Failed to verify inspection:', err);
+      setAnalysisError('Failed to update verification status. Please try again.');
+    }
+  };
+
   // Handle 1-click Dispatch Maintenance Work Order
   const handleDispatchWorkOrder = async () => {
     if (!user || !selectedInspection) return;
+    
+    // Check verification status if confidence is low
+    if ((selectedInspection.ncr.confidenceScore || 0.75) < 0.6 && selectedInspection.verificationStatus !== 'verified') {
+      setAnalysisError('Cannot dispatch work order: This inspection requires verification due to low confidence score. Please review and approve/reject first.');
+      return;
+    }
+    
     setIsDispatching(true);
     try {
       const woNumber = `WO-${Math.floor(1000 + Math.random() * 9000)}`;
@@ -449,6 +493,9 @@ export default function App() {
                         record={selectedInspection}
                         onDispatchWorkOrder={handleDispatchWorkOrder}
                         isDispatching={isDispatching}
+                        onVerifyInspection={handleVerifyInspection}
+                        verificationNotes={verificationNotes}
+                        onVerificationNotesChange={setVerificationNotes}
                       />
                     </div>
 

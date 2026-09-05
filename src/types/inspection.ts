@@ -21,6 +21,8 @@ export interface NonConformanceReport {
   safetyAdvisory?: string;
   inspectedAt: string;
   modelUsed?: string;
+  ataChapter: string;
+  ataDescription: string;
 }
 
 export interface ChatMessage {
@@ -53,6 +55,10 @@ export interface InspectionRecord {
   messages: ChatMessage[];
   status?: 'Pending Review' | 'Dispatched' | 'Resolved';
   workOrder?: WorkOrderTicket;
+  verificationStatus?: 'pending' | 'verified' | 'rejected';
+  verifiedBy?: string;
+  verifiedAt?: string;
+  verificationNotes?: string;
   createdAt: string;
   updatedAt: string;
 }
