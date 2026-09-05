@@ -6,6 +6,7 @@ import { GoogleGenAI, Type } from "@google/genai";
 import dotenv from "dotenv";
 import zlib from "node:zlib";
 import admin from "firebase-admin";
+import { getAuth } from "firebase-admin/auth";
 
 dotenv.config();
 
@@ -212,7 +213,7 @@ async function startServer() {
     const idToken = authHeader.substring(7); // Remove "Bearer " prefix
 
     try {
-      const decodedToken = await admin.auth().verifyIdToken(idToken);
+      const decodedToken = await getAuth().verifyIdToken(idToken);
       (req as any).firebaseUser = decodedToken;
       console.log(`[Firebase Auth] Token verified for user: ${decodedToken.uid}`);
       next();

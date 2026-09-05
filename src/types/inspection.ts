@@ -23,6 +23,8 @@ export interface NonConformanceReport {
   modelUsed?: string;
   ataChapter: string;
   ataDescription: string;
+  confidenceScore: number;
+  confidenceLabel: string;
 }
 
 export interface ChatMessage {
