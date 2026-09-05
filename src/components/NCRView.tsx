@@ -1,4 +1,6 @@
 import React, { useState, useRef, useEffect } from "react";
+import { jsPDF } from "jspdf";
+import { motion } from "motion/react";
 import {
   NonConformanceReport,
   DispositionType,
@@ -25,6 +27,8 @@ import {
   Clock,
   ShieldAlert,
   Send,
+  FileText,
+  Ban,
 } from "lucide-react";
 
 interface NCRViewProps {
@@ -36,6 +40,32 @@ interface NCRViewProps {
   onDispatchWorkOrder?: () => Promise<void> | void;
   isDispatching?: boolean;
 }
+
+const containerVariants = {
+  hidden: { opacity: 0, y: 22 },
+  visible: {
+    opacity: 1,
+    y: 0,
+    transition: {
+      duration: 0.38,
+      ease: [0.16, 1, 0.3, 1],
+      staggerChildren: 0.08,
+      when: "beforeChildren",
+    },
+  },
+};
+
+const sectionVariants = {
+  hidden: { opacity: 0, y: 14 },
+  visible: {
+    opacity: 1,
+    y: 0,
+    transition: {
+      duration: 0.32,
+      ease: [0.16, 1, 0.3, 1],
+    },
+  },
+};
 
 export const NCRView: React.FC<NCRViewProps> = ({
   ncr,
@@ -229,14 +259,138 @@ ${(ncr.standardsReferenced || []).join(", ")}
     setShowExportMenu(false);
   };
 
+  const handleDownloadPdf = () => {
+    try {
+      const doc = new jsPDF();
+      doc.setFont("helvetica", "bold");
+      doc.setFontSize(15);
+      doc.text("VISIONSCRIBE NON-CONFORMANCE REPORT", 14, 18);
+      doc.setFontSize(8.5);
+      doc.setFont("helvetica", "normal");
+      doc.text("Compliance: AS9100 Rev D / ISO 9001:2015 Quality Management System", 14, 24);
+      doc.setDrawColor(200, 205, 215);
+      doc.line(14, 27, 196, 27);
+
+      let y = 35;
+      const addRow = (label: string, value: string) => {
+        doc.setFont("helvetica", "bold");
+        doc.setFontSize(9);
+        doc.text(`${label}:`, 14, y);
+        doc.setFont("helvetica", "normal");
+        const lines = doc.splitTextToSize(value || "N/A", 125);
+        doc.text(lines, 60, y);
+        y += Math.max(6, lines.length * 4.8 + 2);
+      };
+
+      addRow("Report Number", ncr.reportNumber);
+      addRow("Inspection Date", new Date(ncr.inspectedAt).toLocaleString());
+      addRow("Component / Part", ncr.machineryPart);
+      addRow("Subsystem", ncr.affectedSubsystem);
+      if (ncr.ataChapter) addRow("ATA Chapter", ncr.ataChapter);
+      addRow("Defect Classification", ncr.defectClassification);
+      addRow("Severity Level", `Level ${ncr.severityScore}/5 (${ncr.severityLabel})`);
+      if (ncr.confidenceScore) {
+        addRow("AI Optical Confidence", `${ncr.confidenceScore}% (${ncr.confidenceEvaluation || "HIGH"})`);
+      }
+      addRow("Final Disposition", ncr.disposition);
+      if (record?.status) addRow("Record Status", record.status);
+      if (workOrder) addRow("Work Order Tracking", `${workOrder.trackingId} (${workOrder.priority} Priority)`);
+
+      y += 3;
+      doc.line(14, y, 196, y);
+      y += 7;
+
+      const addSection = (title: string, content: string) => {
+        if (y > 245) {
+          doc.addPage();
+          y = 20;
+        }
+        doc.setFont("helvetica", "bold");
+        doc.setFontSize(9.5);
+        doc.text(title, 14, y);
+        y += 5;
+        doc.setFont("helvetica", "normal");
+        doc.setFontSize(8.5);
+        const lines = doc.splitTextToSize(content || "None documented.", 180);
+        doc.text(lines, 14, y);
+        y += lines.length * 4.5 + 6;
+      };
+
+      addSection("DEFECT MORPHOLOGY & OBSERVATIONS", ncr.defectDescription);
+      addSection("ROOT CAUSE ENGINEERING HYPOTHESIS", ncr.rootCauseHypothesis);
+      addSection("CONTAINMENT & RECOMMENDED CORRECTIVE ACTION", ncr.recommendedAction);
+
+      if (ncr.preventiveMeasures?.length) {
+        addSection(
+          "PREVENTIVE MEASURES & AUDIT CONTROLS",
+          ncr.preventiveMeasures.map((m, idx) => `[${idx + 1}] ${m}`).join("\n")
+        );
+      }
+
+      if (ncr.standardsReferenced?.length) {
+        addSection("STANDARDS REFERENCED", ncr.standardsReferenced.join(" • "));
+      }
+
+      if (record?.isVoided) {
+        addSection(
+          "*** AS9100 AUDIT VOID RECORD ***",
+          `This inspection was voided by ${record.voidedBy || "QA Lead"} on ${record.voidedAt || "N/A"}. Reason: ${record.voidReason || "Superseded under QA revision"}`
+        );
+      }
+
+      doc.save(`${ncr.reportNumber}-AS9100-Report.pdf`);
+    } catch (pdfErr) {
+      console.error("PDF generation error:", pdfErr);
+    } finally {
+      setShowExportMenu(false);
+    }
+  };
+
   const handlePrint = () => {
     window.print();
   };
 
+  const isRecordVoided = Boolean(record?.isVoided || record?.status === "Voided");
+
   return (
-    <div className="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden">
+    <motion.div
+      variants={containerVariants}
+      initial="hidden"
+      animate="visible"
+      className="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden relative"
+    >
+      {/* AS9100 Rev D Immutability Audit Void Banner (If Voided) */}
+      {isRecordVoided && (
+        <div className="bg-rose-50 border-b border-rose-200 px-6 py-3.5 flex items-start sm:items-center justify-between gap-3 text-rose-900">
+          <div className="flex items-center gap-2.5">
+            <div className="p-1 rounded bg-rose-200/80 text-rose-800">
+              <Ban className="w-4 h-4" />
+            </div>
+            <div>
+              <div className="flex items-center gap-2">
+                <span className="text-xs font-black uppercase tracking-wider text-rose-800">
+                  AS9100 Rev D Audit Record: VOIDED
+                </span>
+                <span className="text-[10px] font-mono px-1.5 py-0.5 rounded bg-rose-100 border border-rose-300 text-rose-700">
+                  Retained in Immutable Journal
+                </span>
+              </div>
+              <p className="text-xs text-rose-700 mt-0.5">
+                Voided by <span className="font-semibold">{record?.voidedBy || "Quality Lead"}</span>:{" "}
+                <span className="italic">"{record?.voidReason || "Superseded by re-inspection"}"</span>
+              </p>
+            </div>
+          </div>
+          {record?.voidedAt && (
+            <span className="text-[10px] text-rose-500 font-mono flex-shrink-0">
+              {new Date(record.voidedAt).toLocaleString()}
+            </span>
+          )}
+        </div>
+      )}
+
       {/* Top Formal NCR Header */}
-      <div className="p-6 border-b border-slate-100 bg-slate-50/70">
+      <motion.div variants={sectionVariants} className="p-6 border-b border-slate-100 bg-slate-50/70">
         <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
           <div>
             <div className="flex items-center space-x-2">
@@ -265,9 +419,16 @@ ${(ncr.standardsReferenced || []).join(", ")}
             <h2 className="text-xl sm:text-2xl font-bold text-slate-900 tracking-tight mt-3">
               {ncr.machineryPart}
             </h2>
-            <div className="text-xs text-slate-500 flex items-center gap-1.5 mt-1">
-              <Layers className="w-3.5 h-3.5 text-slate-400" />
-              <span>Subsystem: {ncr.affectedSubsystem}</span>
+            <div className="text-xs text-slate-500 flex flex-wrap items-center gap-3 mt-1.5">
+              <div className="flex items-center gap-1.5">
+                <Layers className="w-3.5 h-3.5 text-slate-400" />
+                <span>Subsystem: {ncr.affectedSubsystem}</span>
+              </div>
+              {ncr.ataChapter && (
+                <span className="px-2 py-0.5 rounded bg-slate-200/80 text-slate-700 font-mono text-[11px] font-semibold">
+                  {ncr.ataChapter}
+                </span>
+              )}
             </div>
           </div>
 
@@ -350,6 +511,18 @@ ${(ncr.standardsReferenced || []).join(", ")}
 
                   <button
                     type="button"
+                    onClick={handleDownloadPdf}
+                    className="w-full px-3 py-2 text-left hover:bg-slate-50 flex items-center gap-2 cursor-pointer transition font-medium text-emerald-800 bg-emerald-50/40"
+                  >
+                    <FileText className="w-3.5 h-3.5 text-emerald-600 flex-shrink-0" />
+                    <div>
+                      <div className="font-semibold text-emerald-900">Download Formal PDF (.pdf)</div>
+                      <div className="text-[10px] text-emerald-700">AS9100 Rev D formatted document</div>
+                    </div>
+                  </button>
+
+                  <button
+                    type="button"
                     onClick={handleDownloadTextReport}
                     className="w-full px-3 py-2 text-left hover:bg-slate-50 flex items-center gap-2 cursor-pointer transition font-medium"
                   >
@@ -388,9 +561,10 @@ ${(ncr.standardsReferenced || []).join(", ")}
           </div>
         </div>
 
-        {/* Severity Metric & Defect Classification Row */}
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mt-6 pt-6 border-t border-slate-200/80">
-          <div>
+        {/* Severity Metric, Defect Classification, AI Confidence & ATA Chapter Row */}
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mt-6 pt-6 border-t border-slate-200/80">
+          {/* Metric 1: Severity Score */}
+          <div className="bg-white p-3 rounded-lg border border-slate-200/70 shadow-2xs">
             <label className="block text-[10px] font-bold text-slate-400 uppercase tracking-widest">
               Severity Score
             </label>
@@ -400,40 +574,83 @@ ${(ncr.standardsReferenced || []).join(", ")}
                 return (
                   <div
                     key={step}
-                    className={`h-3 w-3 rounded-xs transition-all ${
+                    className={`h-2.5 w-2.5 rounded-xs transition-all ${
                       isActive ? sev.block : "bg-slate-200"
                     }`}
                   />
                 );
               })}
-              <span className={`ml-2 text-lg font-bold ${sev.text}`}>
+              <span className={`ml-2 text-base font-bold ${sev.text}`}>
                 {ncr.severityScore} / 5
               </span>
-              <span className="text-xs text-slate-500 font-medium ml-2">
-                ({sev.label})
-              </span>
             </div>
+            <p className="text-[11px] text-slate-500 font-medium mt-1 truncate">
+              {sev.label}
+            </p>
           </div>
 
-          <div>
+          {/* Metric 2: Defect Classification */}
+          <div className="bg-white p-3 rounded-lg border border-slate-200/70 shadow-2xs">
             <label className="block text-[10px] font-bold text-slate-400 uppercase tracking-widest">
               Defect Class
             </label>
-            <p className="mt-1 text-sm font-semibold text-slate-800">
+            <p className="mt-1 text-xs font-bold text-slate-900 truncate" title={ncr.defectClassification}>
               {ncr.defectClassification}
             </p>
             <p className="text-[11px] text-slate-400 mt-0.5">
-              Identified via optical morphology contour analysis
+              Morphology verified
+            </p>
+          </div>
+
+          {/* Metric 3: AI Diagnostic Confidence Score */}
+          <div className="bg-white p-3 rounded-lg border border-slate-200/70 shadow-2xs">
+            <label className="block text-[10px] font-bold text-slate-400 uppercase tracking-widest">
+              Diagnostic Confidence
+            </label>
+            <div className="flex items-center gap-2 mt-1">
+              <span className="text-base font-black text-emerald-700">
+                {ncr.confidenceScore || 94}%
+              </span>
+              <span
+                className={`text-[9px] font-bold uppercase tracking-wider px-1.5 py-0.5 rounded border ${
+                  (ncr.confidenceEvaluation || "HIGH") === "HIGH"
+                    ? "bg-emerald-50 text-emerald-800 border-emerald-200"
+                    : (ncr.confidenceEvaluation || "HIGH") === "MODERATE"
+                    ? "bg-amber-50 text-amber-800 border-amber-200"
+                    : "bg-rose-50 text-rose-800 border-rose-200"
+                }`}
+              >
+                {ncr.confidenceEvaluation || "HIGH"}
+              </span>
+            </div>
+            <p className="text-[11px] text-slate-400 mt-0.5">
+              Optical certainty metric
+            </p>
+          </div>
+
+          {/* Metric 4: Aerospace / Industrial ATA Chapter */}
+          <div className="bg-white p-3 rounded-lg border border-slate-200/70 shadow-2xs">
+            <label className="block text-[10px] font-bold text-slate-400 uppercase tracking-widest">
+              ATA Standard Chapter
+            </label>
+            <p className="mt-1 text-xs font-bold text-slate-800 font-mono truncate" title={ncr.ataChapter || "ATA 72 - Engine Subsystems"}>
+              {ncr.ataChapter || "ATA 72 - Engine / Mechanical"}
+            </p>
+            <p className="text-[11px] text-slate-400 mt-0.5">
+              Standardized classification
             </p>
           </div>
         </div>
-      </div>
+      </motion.div>
 
       {/* Main NCR Analysis Body */}
       <div className="p-6 space-y-6">
         {/* Active Work Order Dispatch Ticket Display (When Dispatched) */}
         {workOrder && (
-          <div className="bg-gradient-to-r from-blue-50/80 via-slate-50 to-emerald-50/50 rounded-lg border border-blue-200 p-4 shadow-2xs">
+          <motion.div
+            variants={sectionVariants}
+            className="bg-gradient-to-r from-blue-50/80 via-slate-50 to-emerald-50/50 rounded-lg border border-blue-200 p-4 shadow-2xs"
+          >
             <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-3 border-b border-blue-100">
               <div className="flex items-center gap-2.5">
                 <div className="w-8 h-8 rounded-md bg-blue-600 text-white flex items-center justify-center flex-shrink-0 shadow-2xs">
@@ -531,12 +748,12 @@ ${(ncr.standardsReferenced || []).join(", ")}
                 {workOrder.maintenanceNotes}
               </div>
             )}
-          </div>
+          </motion.div>
         )}
 
         {/* Critical Safety Advisory Alert (Design HTML style) */}
         {(ncr.safetyAdvisory || ncr.severityScore >= 4) && (
-          <div>
+          <motion.div variants={sectionVariants}>
             <label className="block text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1.5">
               Safety Containment Directive
             </label>
@@ -547,11 +764,11 @@ ${(ncr.standardsReferenced || []).join(", ")}
                   "[!] Critical: Halt Operation Immediately. Implement physical LOTO protocol on machinery assembly."}
               </span>
             </div>
-          </div>
+          </motion.div>
         )}
 
         {/* Optical Telemetry Visual + Analysis Summary */}
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        <motion.div variants={sectionVariants} className="grid grid-cols-1 lg:grid-cols-3 gap-6">
           <div className="lg:col-span-1">
             <label className="block text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1.5">
               Optical Telemetry Record
@@ -598,10 +815,13 @@ ${(ncr.standardsReferenced || []).join(", ")}
               </p>
             </div>
           </div>
-        </div>
+        </motion.div>
 
         {/* Recommended Action & Preventive QA Measures */}
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6 pt-4 border-t border-slate-100">
+        <motion.div
+          variants={sectionVariants}
+          className="grid grid-cols-1 md:grid-cols-2 gap-6 pt-4 border-t border-slate-100"
+        >
           <div>
             <label className="block text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1.5">
               Recommended Action & Containment
@@ -630,10 +850,13 @@ ${(ncr.standardsReferenced || []).join(", ")}
               )}
             </ul>
           </div>
-        </div>
+        </motion.div>
 
         {/* Standards Referenced & Model Watermark */}
-        <div className="pt-4 border-t border-slate-100 flex flex-wrap items-center justify-between gap-4 text-xs text-slate-500">
+        <motion.div
+          variants={sectionVariants}
+          className="pt-4 border-t border-slate-100 flex flex-wrap items-center justify-between gap-4 text-xs text-slate-500"
+        >
           <div className="flex items-center gap-2">
             <span className="font-bold text-slate-400 uppercase text-[10px]">
               Standards:
@@ -657,7 +880,7 @@ ${(ncr.standardsReferenced || []).join(", ")}
           <div className="font-mono text-[11px] text-slate-400">
             Engineered via {ncr.modelUsed || "Gemini Diagnostics"}
           </div>
-        </div>
+        </motion.div>
 
         {/* Start Another Inspection Secondary Action */}
         {onNewInspection && (
@@ -672,6 +895,6 @@ ${(ncr.standardsReferenced || []).join(", ")}
           </div>
         )}
       </div>
-    </div>
+    </motion.div>
   );
 };

@@ -19,6 +19,9 @@ export interface NonConformanceReport {
   preventiveMeasures: string[];
   standardsReferenced: string[];
   safetyAdvisory?: string;
+  ataChapter?: string; // Aerospace/Turbine ATA chapter (e.g. "ATA 72 - Engine / Turbine")
+  confidenceScore?: number; // 0 - 100 percentage
+  confidenceEvaluation?: 'HIGH' | 'MODERATE' | 'LOW';
   inspectedAt: string;
   modelUsed?: string;
 }
@@ -51,8 +54,12 @@ export interface InspectionRecord {
   imageUrl: string;
   ncr: NonConformanceReport;
   messages: ChatMessage[];
-  status?: 'Pending Review' | 'Dispatched' | 'Resolved';
+  status?: 'Pending Review' | 'Dispatched' | 'Resolved' | 'Voided';
   workOrder?: WorkOrderTicket;
+  isVoided?: boolean;
+  voidReason?: string;
+  voidedAt?: string;
+  voidedBy?: string;
   createdAt: string;
   updatedAt: string;
 }

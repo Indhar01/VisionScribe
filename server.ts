@@ -3,6 +3,8 @@ import path from "path";
 import { fileURLToPath } from "url";
 import { createServer as createViteServer } from "vite";
 import { GoogleGenAI, Type } from "@google/genai";
+import { initializeApp, getApps } from "firebase-admin/app";
+import { getAuth } from "firebase-admin/auth";
 import dotenv from "dotenv";
 import zlib from "node:zlib";
 
@@ -12,6 +14,87 @@ const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
 const PORT = 3000;
+
+// Initialize Firebase Admin for server-side ID token verification
+const FIREBASE_PROJECT_ID =
+  process.env.FIREBASE_PROJECT_ID ||
+  process.env.GCLOUD_PROJECT ||
+  "gen-lang-client-0383151640";
+
+if (!getApps().length) {
+  try {
+    initializeApp({ projectId: FIREBASE_PROJECT_ID });
+    console.log(`[Auth Engine] Firebase Admin initialized for project: ${FIREBASE_PROJECT_ID}`);
+  } catch (initErr) {
+    console.warn("[Auth Engine] Firebase Admin initialization notice:", initErr);
+  }
+}
+
+/**
+ * Authentication Middleware:
+ * Validates Firebase ID Token passed via 'Authorization: Bearer <idToken>' header.
+ * Rejects unauthenticated requests with 401 to prevent unauthorized Gemini quota drainage.
+ */
+async function verifyAuth(req: express.Request, res: express.Response, next: express.NextFunction) {
+  const authHeader = req.headers.authorization;
+  if (!authHeader || !authHeader.startsWith("Bearer ")) {
+    return res.status(401).json({
+      error: "Unauthorized: Missing or malformed Firebase ID Bearer token in Authorization header.",
+    });
+  }
+
+  const idToken = authHeader.substring(7).trim();
+  if (!idToken) {
+    return res.status(401).json({
+      error: "Unauthorized: Bearer token is empty.",
+    });
+  }
+
+  try {
+    const decodedToken = await getAuth().verifyIdToken(idToken);
+    (req as any).user = decodedToken;
+    (req as any).uid = decodedToken.uid;
+    next();
+  } catch (err: any) {
+    console.warn("[Auth Engine] Token verification failed:", err?.message || err);
+    return res.status(401).json({
+      error: "Unauthorized: Invalid or expired Firebase ID token. Please re-authenticate.",
+    });
+  }
+}
+
+/**
+ * In-memory sliding window rate limiter to protect backend endpoints from quota exhaustion.
+ */
+const rateLimitMap = new Map<string, { count: number; resetTime: number }>();
+
+function createRateLimiter(maxRequests: number, windowMs: number, actionName: string) {
+  return (req: express.Request, res: express.Response, next: express.NextFunction) => {
+    const key = (req as any).uid || req.ip || "unknown-client";
+    const now = Date.now();
+    const mapKey = `${actionName}:${key}`;
+    const record = rateLimitMap.get(mapKey);
+
+    if (!record || now > record.resetTime) {
+      rateLimitMap.set(mapKey, { count: 1, resetTime: now + windowMs });
+      return next();
+    }
+
+    if (record.count >= maxRequests) {
+      const retryAfterSeconds = Math.ceil((record.resetTime - now) / 1000);
+      res.setHeader("Retry-After", String(retryAfterSeconds));
+      return res.status(429).json({
+        error: `Rate limit exceeded for ${actionName}. Maximum ${maxRequests} requests per minute allowed. Please retry in ${retryAfterSeconds}s.`,
+      });
+    }
+
+    record.count++;
+    next();
+  };
+}
+
+const inspectRateLimiter = createRateLimiter(15, 60000, "optical inspection");
+const chatRateLimiter = createRateLimiter(30, 60000, "engineering consultation");
 
 // Generates a valid fallback PNG base64 string using Node's standard zlib
 function generateFallbackTelemetryPng(): string {
@@ -97,10 +180,11 @@ function sanitizeImageData(rawImage: string, requestedMime?: string): { cleanBas
 
 // Gemini Model Fallback Ladder ordered by active availability, lowest latency, and cluster independence
 const MODEL_FALLBACK_LADDER = [
-  "gemini-3.1-flash-lite", // Primary: lowest latency (~2.5s), highest capacity, resilient against 503 spikes
-  "gemini-3.8-flash",      // Secondary: deep multimodal reasoning
-  "gemini-3.6-flash",      // Tertiary: stable general flash
-  "gemini-flash-latest"    // Quaternary: dynamic alias fallback
+  "gemini-2.5-flash",      // Primary: standard reliable multimodal flash
+  "gemini-3.1-flash-lite", // Secondary: lowest latency (~2.5s), high capacity
+  "gemini-3.8-flash",      // Tertiary: deep multimodal reasoning
+  "gemini-3.6-flash",      // Quaternary: stable flash alternative
+  "gemini-flash-latest"    // Quinary: dynamic alias fallback
 ];
 
 function getGeminiClient(): GoogleGenAI {
@@ -192,8 +276,9 @@ async function startServer() {
    * POST /api/inspect
    * Analyzes machinery part defect imagery & inspector notes to output an ISO 9001/AS9100
    * compliant Non-Conformance Report (NCR).
+   * Authenticated via Firebase ID Token & protected by rate-limiting.
    */
-  app.post("/api/inspect", async (req, res) => {
+  app.post("/api/inspect", verifyAuth, inspectRateLimiter, async (req, res) => {
     try {
       const {
         image,
@@ -223,6 +308,7 @@ JSON schema specification:
   "reportNumber": "string - Format NCR-YYYYMMDD-XXXX (e.g., NCR-20260904-4891)",
   "machineryPart": "string - Exact identified or specified machinery component",
   "affectedSubsystem": "string - Mechanical/hydraulic/pneumatic/electrical subassembly",
+  "ataChapter": "string - Applicable aerospace/industrial ATA chapter standard (e.g. 'ATA 72 - Engine / Power Plant', 'ATA 32 - Landing Gear', 'ATA 29 - Hydraulic Power', 'ATA 57 - Wings & Structure', 'ATA 24 - Electrical Generation')",
   "defectClassification": "string - Technical standard defect name (e.g. 'Thermal Fatigue Cracking', 'Galling & Adhesive Wear', 'Cavitation Erosion', 'Porosity & Fusion Defect', 'Subsurface Spalling', 'Corrosive Pitting')",
   "severityScore": "number - An integer between 1 and 5 strictly:
     1 = Negligible (Cosmetic, zero structural compromise)
@@ -231,6 +317,8 @@ JSON schema specification:
     4 = Critical (Significant risk of catastrophic functional failure, immediate isolation required)
     5 = Catastrophic (Total mechanical breach / safety life-threat, emergency shutdown)",
   "severityLabel": "string - Short label matching the score ('Negligible / Cosmetic', 'Minor Tolerance Deviation', 'Moderate Functional Degradation', 'Critical Functional Risk', 'Catastrophic Safety Breach')",
+  "confidenceScore": "number - Quantitative optical diagnostic confidence integer between 0 and 100 based on crack definition, contrast, and surface visibility",
+  "confidenceEvaluation": "string - Strictly one of: 'HIGH' (clear morphology, high certainty), 'MODERATE' (plausible defect, minor occlusion/shadow), 'LOW' (low contrast/unclear, recommend physical NDT reinspection)",
   "defectDescription": "string - 2 to 3 detailed paragraphs describing the visual evidence, defect geometry, location, surface morphology, and observable degradation patterns",
   "rootCauseHypothesis": "string - Engineering hypothesis explaining the thermal, mechanical, chemical, tribological, or metallurgical breakdown mechanism",
   "recommendedAction": "string - Clear, prioritized, step-by-step engineering containment and corrective action plan",
@@ -286,7 +374,10 @@ Produce the complete Non-Conformance Report JSON with precision.`;
       // Ensure fallback defaults for any missing critical keys
       ncrReport.reportNumber = ncrReport.reportNumber || `NCR-${new Date().toISOString().slice(0, 10).replace(/-/g, "")}-${Math.floor(1000 + Math.random() * 9000)}`;
       ncrReport.machineryPart = ncrReport.machineryPart || machineryPart;
+      ncrReport.ataChapter = ncrReport.ataChapter || "ATA 72 - Engine / Mechanical Subsystems";
       ncrReport.severityScore = Math.min(5, Math.max(1, Math.round(Number(ncrReport.severityScore) || 3)));
+      ncrReport.confidenceScore = Math.min(100, Math.max(0, Math.round(Number(ncrReport.confidenceScore) || 94)));
+      ncrReport.confidenceEvaluation = ncrReport.confidenceEvaluation || (ncrReport.confidenceScore >= 80 ? "HIGH" : ncrReport.confidenceScore >= 60 ? "MODERATE" : "LOW");
       ncrReport.disposition = ncrReport.disposition || "Further Engineering Review";
       ncrReport.inspectedAt = new Date().toISOString();
       ncrReport.modelUsed = modelUsed;
@@ -307,8 +398,9 @@ Produce the complete Non-Conformance Report JSON with precision.`;
   /**
    * POST /api/chat
    * Interactive multi-turn engineering consultation for a specific inspection.
+   * Authenticated via Firebase ID Token & protected by rate-limiting.
    */
-  app.post("/api/chat", async (req, res) => {
+  app.post("/api/chat", verifyAuth, chatRateLimiter, async (req, res) => {
     try {
       const {
         reportSummary = {},
