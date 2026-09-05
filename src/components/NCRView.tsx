@@ -29,6 +29,7 @@ import {
   Send,
   FileText,
   Ban,
+  Eye,
 } from "lucide-react";
 import { exportAuditTrail } from "../utils/auditLogger";
 
@@ -358,7 +359,6 @@ ${(ncr.standardsReferenced || []).join(", ")}
     window.print();
   };
 
-<<<<<<< HEAD
   const handleExportAuditTrail = () => {
     const auditTrail = exportAuditTrail();
     const exportData = {
@@ -380,9 +380,8 @@ ${(ncr.standardsReferenced || []).join(", ")}
     URL.revokeObjectURL(url);
     setShowExportMenu(false);
   };
-=======
+
   const isRecordVoided = Boolean(record?.isVoided || record?.status === "Voided");
->>>>>>> 42c0948deece6a7d9bf159d38296e131a079a857
 
   return (
     <motion.div
@@ -685,44 +684,7 @@ ${(ncr.standardsReferenced || []).join(", ")}
             </p>
           </div>
         </div>
-<<<<<<< HEAD
-
-        {/* ATA Chapter & Confidence Display Row */}
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6 pt-4 border-t border-slate-200/80">
-          <div>
-            <label className="block text-[10px] font-bold text-slate-400 uppercase tracking-widest">
-              ATA Chapter Classification
-            </label>
-            <p className="mt-1 text-sm font-semibold text-slate-800">
-              {ncr.ataChapter}
-            </p>
-            <p className="text-[11px] text-slate-600 mt-0.5">
-              {ncr.ataDescription}
-            </p>
-          </div>
-
-          <div>
-            <label className="block text-[10px] font-bold text-slate-400 uppercase tracking-widest">
-              Confidence Assessment
-            </label>
-            <div className="flex items-center mt-2 space-x-1.5">
-              <div className={`inline-flex items-center px-2.5 py-1 rounded text-xs font-bold ${
-                ncr.confidenceScore >= 0.8 ? 'bg-emerald-50 text-emerald-700 border border-emerald-200' :
-                ncr.confidenceScore >= 0.6 ? 'bg-amber-50 text-amber-700 border border-amber-200' :
-                'bg-red-50 text-red-700 border border-red-200'
-              }`}>
-                {ncr.confidenceLabel || 'MEDIUM'}
-              </div>
-              <span className="text-sm font-semibold text-slate-700">
-                {Math.round((ncr.confidenceScore || 0.75) * 100)}%
-              </span>
-            </div>
-          </div>
-        </div>
-      </div>
-=======
       </motion.div>
->>>>>>> 42c0948deece6a7d9bf159d38296e131a079a857
 
       {/* Main NCR Analysis Body */}
       <div className="p-6 space-y-6">
@@ -833,7 +795,7 @@ ${(ncr.standardsReferenced || []).join(", ")}
         )}
 
         {/* Verification Gate for Low Confidence Reports */}
-        {(ncr.confidenceScore || 0.75) < 0.6 && record?.verificationStatus !== 'verified' && (
+        {(ncr.confidenceScore ?? 75) < 60 && record?.verificationStatus !== 'verified' && (
           <div className="bg-amber-50 border border-amber-300 rounded-lg p-4 shadow-2xs">
             <div className="flex items-start gap-3">
               <ShieldAlert className="w-5 h-5 text-amber-600 flex-shrink-0 mt-0.5" />
@@ -843,7 +805,7 @@ ${(ncr.standardsReferenced || []).join(", ")}
                     Verification Required - Low Confidence Detection
                   </h3>
                   <span className="text-xs font-semibold text-amber-700 bg-amber-100 px-2.5 py-1 rounded">
-                    {Math.round((ncr.confidenceScore || 0.75) * 100)}% Confidence
+                    {ncr.confidenceScore ?? 75}% Confidence
                   </span>
                 </div>
                 <p className="text-xs text-amber-800 mb-3">

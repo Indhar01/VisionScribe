@@ -102,17 +102,10 @@ export default function App() {
       const { dataUrl: optimizedImage, mimeType: optimizedMime } =
         await compressAndOptimizeTelemetryImage(payload.image);
 
-<<<<<<< HEAD
-      // Get Firebase ID token
+      // Get Firebase ID token for authenticated server-side inspection request
       const idToken = await user.getIdToken();
 
       // Call Express server-side endpoint which invokes Gemini 2.5 Flash / 2.0 Flash ladder
-=======
-      setAnalysisStep("Extracting optical defect morphology & surface contours...");
-      const idToken = await user.getIdToken();
-
-      // Call Express server-side endpoint with Firebase ID Bearer token
->>>>>>> 42c0948deece6a7d9bf159d38296e131a079a857
       const response = await fetch("/api/inspect", {
         method: "POST",
         headers: {
@@ -208,15 +201,10 @@ export default function App() {
         prev ? { ...prev, messages: updatedWithUser } : prev
       );
 
-<<<<<<< HEAD
-      // Get Firebase ID token
+      // Get Firebase ID token for authenticated chat request
       const idToken = await user.getIdToken();
 
       // 2. Call backend /api/chat with full multi-turn context
-=======
-      // 2. Call backend /api/chat with full multi-turn context and Firebase ID Token
-      const idToken = await user.getIdToken();
->>>>>>> 42c0948deece6a7d9bf159d38296e131a079a857
       const res = await fetch("/api/chat", {
         method: "POST",
         headers: {
@@ -334,7 +322,7 @@ export default function App() {
     if (!user || !selectedInspection) return;
     
     // Check verification status if confidence is low
-    if ((selectedInspection.ncr.confidenceScore || 0.75) < 0.6 && selectedInspection.verificationStatus !== 'verified') {
+    if ((selectedInspection.ncr.confidenceScore ?? 75) < 60 && selectedInspection.verificationStatus !== 'verified') {
       setAnalysisError('Cannot dispatch work order: This inspection requires verification due to low confidence score. Please review and approve/reject first.');
       return;
     }

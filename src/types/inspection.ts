@@ -20,14 +20,11 @@ export interface NonConformanceReport {
   standardsReferenced: string[];
   safetyAdvisory?: string;
   ataChapter?: string; // Aerospace/Turbine ATA chapter (e.g. "ATA 72 - Engine / Turbine")
-  confidenceScore?: number; // 0 - 100 percentage
+  ataDescription?: string; // One sentence describing how defect relates to ATA chapter
+  confidenceScore?: number; // Integer 0-100 percentage confidence
   confidenceEvaluation?: 'HIGH' | 'MODERATE' | 'LOW';
   inspectedAt: string;
   modelUsed?: string;
-  ataChapter: string;
-  ataDescription: string;
-  confidenceScore: number;
-  confidenceLabel: string;
 }
 
 export interface ChatMessage {

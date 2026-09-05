@@ -7,22 +7,8 @@ import { initializeApp, getApps } from "firebase-admin/app";
 import { getAuth } from "firebase-admin/auth";
 import dotenv from "dotenv";
 import zlib from "node:zlib";
-import admin from "firebase-admin";
-import { getAuth } from "firebase-admin/auth";
 
 dotenv.config();
-
-// Initialize Firebase Admin SDK
-let firebaseInitialized = false;
-try {
-  admin.initializeApp({
-    projectId: process.env.FIREBASE_PROJECT_ID,
-  });
-  firebaseInitialized = true;
-  console.log("[Firebase Admin] SDK initialized successfully");
-} catch (err: any) {
-  console.warn("[Firebase Admin] Initialization error (proceeding with development mode):", err?.message);
-}
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -275,38 +261,6 @@ async function startServer() {
   app.use(express.json({ limit: "30mb" }));
   app.use(express.urlencoded({ extended: true, limit: "30mb" }));
 
-  /**
-   * Middleware: Verify Firebase ID Token from Authorization header
-   */
-  async function verifyFirebaseToken(
-    req: express.Request,
-    res: express.Response,
-    next: express.NextFunction
-  ) {
-    if (!firebaseInitialized) {
-      // Development mode: skip verification
-      console.log("[Firebase Auth] Skipping token verification (Firebase not initialized)");
-      return next();
-    }
-
-    const authHeader = req.headers.authorization;
-    if (!authHeader || !authHeader.startsWith("Bearer ")) {
-      return res.status(401).json({ error: "Missing or invalid Authorization header" });
-    }
-
-    const idToken = authHeader.substring(7); // Remove "Bearer " prefix
-
-    try {
-      const decodedToken = await getAuth().verifyIdToken(idToken);
-      (req as any).firebaseUser = decodedToken;
-      console.log(`[Firebase Auth] Token verified for user: ${decodedToken.uid}`);
-      next();
-    } catch (err: any) {
-      console.error("[Firebase Auth] Token verification failed:", err?.message);
-      return res.status(401).json({ error: "Unauthorized: Invalid or expired token" });
-    }
-  }
-
   // Health check endpoint
   app.get("/api/health", (_req, res) => {
     res.json({
@@ -384,10 +338,7 @@ JSON schema specification:
   "preventiveMeasures": ["string array - 3 to 5 preventative quality control checks, maintenance schedule updates, or design improvements"],
   "standardsReferenced": ["string array - 2 to 4 relevant engineering codes/standards, e.g. 'ISO 10816-3', 'ASME B31.3', 'ASTM E1444', 'AWS D1.1', 'DIN 3990'"],
   "safetyAdvisory": "string - Critical operator safety warning regarding handling, operational lockdown, or PPE",
-  "ataChapter": "string - Format ATA XX - Description (e.g., 'ATA 29 - Hydraulic Power Systems')",
-  "ataDescription": "string - One sentence describing how this defect relates to the ATA chapter",
-  "confidenceScore": "number - Between 0.0 and 1.0 indicating your confidence in this assessment (0.0 = very uncertain, 1.0 = very certain). Set to LOW (<0.6) when image is unclear, part is ambiguous, or defect is not clearly visible",
-  "confidenceLabel": "string - One of: 'VERY HIGH', 'HIGH', 'MEDIUM', 'LOW', 'VERY LOW'"
+  "ataDescription": "string - One sentence describing how this defect relates to the ATA chapter"
 }
 
 Do NOT wrap the JSON in Markdown code fences if possible, or provide valid parseable JSON only.`;
@@ -441,10 +392,7 @@ Produce the complete Non-Conformance Report JSON with precision, including ATA c
       ncrReport.confidenceScore = Math.min(100, Math.max(0, Math.round(Number(ncrReport.confidenceScore) || 94)));
       ncrReport.confidenceEvaluation = ncrReport.confidenceEvaluation || (ncrReport.confidenceScore >= 80 ? "HIGH" : ncrReport.confidenceScore >= 60 ? "MODERATE" : "LOW");
       ncrReport.disposition = ncrReport.disposition || "Further Engineering Review";
-      ncrReport.ataChapter = ncrReport.ataChapter || "ATA 00 - General / Unclassified";
       ncrReport.ataDescription = ncrReport.ataDescription || "Defect classification pending ATA cross-reference analysis";
-      ncrReport.confidenceScore = Number(ncrReport.confidenceScore) || 0.75;
-      ncrReport.confidenceLabel = ncrReport.confidenceLabel || (ncrReport.confidenceScore >= 0.8 ? "HIGH" : ncrReport.confidenceScore >= 0.6 ? "MEDIUM" : "LOW");
       ncrReport.inspectedAt = new Date().toISOString();
       ncrReport.modelUsed = modelUsed;
 
