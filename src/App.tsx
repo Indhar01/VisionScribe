@@ -20,8 +20,11 @@ import {
   saveInspectionRecord,
   appendInspectionMessage,
   deleteInspectionRecord,
+  voidInspectionRecord,
   dispatchWorkOrderForInspection,
 } from "./services/inspectionService";
+import { compressAndOptimizeTelemetryImage } from "./utils/imageRasterizer";
+import { AnimatePresence, motion } from "motion/react";
 import { ArrowLeft, AlertCircle } from "lucide-react";
 
 export default function App() {
@@ -95,12 +98,21 @@ export default function App() {
     setAnalysisError(null);
 
     try {
-      setAnalysisStep("Extracting optical defect morphology & surface contours...");
+      setAnalysisStep("Compressing optical telemetry for ISO 9001/AS9100 archival compliance...");
+      const { dataUrl: optimizedImage, mimeType: optimizedMime } =
+        await compressAndOptimizeTelemetryImage(payload.image);
 
+<<<<<<< HEAD
       // Get Firebase ID token
       const idToken = await user.getIdToken();
 
       // Call Express server-side endpoint which invokes Gemini 2.5 Flash / 2.0 Flash ladder
+=======
+      setAnalysisStep("Extracting optical defect morphology & surface contours...");
+      const idToken = await user.getIdToken();
+
+      // Call Express server-side endpoint with Firebase ID Bearer token
+>>>>>>> 42c0948deece6a7d9bf159d38296e131a079a857
       const response = await fetch("/api/inspect", {
         method: "POST",
         headers: {
@@ -108,8 +120,8 @@ export default function App() {
           "Authorization": `Bearer ${idToken}`,
         },
         body: JSON.stringify({
-          image: payload.image,
-          mimeType: payload.mimeType,
+          image: optimizedImage,
+          mimeType: optimizedMime,
           machineryPart: payload.machineryPart,
           subsystem: payload.subsystem,
           notes: payload.notes,
@@ -132,7 +144,7 @@ export default function App() {
       const ncrReport = data.report as NonConformanceReport;
       const inspectionId = `insp-${Date.now()}-${Math.floor(1000 + Math.random() * 9000)}`;
 
-      // Construct Initial Record
+      // Construct Initial Record using optimized raster image
       const newRecord: InspectionRecord = {
         id: inspectionId,
         userId: user.uid,
@@ -140,7 +152,7 @@ export default function App() {
         machineryPart: payload.machineryPart,
         subsystem: payload.subsystem,
         initialNotes: payload.notes,
-        imageUrl: payload.image,
+        imageUrl: optimizedImage,
         ncr: ncrReport,
         messages: [
           {
@@ -196,10 +208,15 @@ export default function App() {
         prev ? { ...prev, messages: updatedWithUser } : prev
       );
 
+<<<<<<< HEAD
       // Get Firebase ID token
       const idToken = await user.getIdToken();
 
       // 2. Call backend /api/chat with full multi-turn context
+=======
+      // 2. Call backend /api/chat with full multi-turn context and Firebase ID Token
+      const idToken = await user.getIdToken();
+>>>>>>> 42c0948deece6a7d9bf159d38296e131a079a857
       const res = await fetch("/api/chat", {
         method: "POST",
         headers: {
@@ -244,6 +261,36 @@ export default function App() {
       throw err;
     } finally {
       setIsSendingChat(false);
+    }
+  };
+
+  // Handle voiding inspection preserving AS9100 / ISO 9001 audit trail
+  const handleVoidInspection = async (id: string, reason: string) => {
+    if (!user) return;
+    try {
+      const inspectorId = user.displayName || user.email || "Certified Lead Inspector";
+      await voidInspectionRecord(user.uid, id, reason, inspectorId);
+
+      const updateRecordVoided = (r: InspectionRecord): InspectionRecord => ({
+        ...r,
+        status: "Voided",
+        isVoided: true,
+        voidReason: reason,
+        voidedAt: new Date().toISOString(),
+        voidedBy: inspectorId,
+        updatedAt: new Date().toISOString(),
+      });
+
+      if (selectedInspection?.id === id) {
+        setSelectedInspection((prev) => (prev ? updateRecordVoided(prev) : null));
+      }
+
+      setInspections((prev) =>
+        prev.map((r) => (r.id === id ? updateRecordVoided(r) : r))
+      );
+    } catch (err: any) {
+      console.error("Failed to void inspection:", err);
+      setAnalysisError(err?.message || "Failed to void inspection record.");
     }
   };
 
@@ -426,91 +473,108 @@ export default function App() {
           <div className="max-w-7xl mx-auto w-full">
             {!user ? (
               <LoginLanding />
-            ) : activeView === "history" ? (
-              <InspectionHistory
-                inspections={inspections}
-                onSelectInspection={(inspection) => {
-                  setSelectedInspection(inspection);
-                  setActiveView("inspect");
-                }}
-                onDeleteInspection={handleDeleteInspection}
-                onStartNewInspection={handleStartNewInspection}
-                isLoading={historyLoading}
-              />
             ) : (
-              <div className="space-y-6">
-                {/* Active Session Top Toolbar when inspection is active */}
-                {selectedInspection && (
-                  <div className="flex items-center justify-between gap-4 pb-2 border-b border-slate-200">
-                    <button
-                      id="btn-back-to-new-inspection"
-                      onClick={handleStartNewInspection}
-                      className="inline-flex items-center gap-2 px-3 py-1.5 rounded-lg bg-white hover:bg-slate-100 text-slate-700 text-xs font-semibold border border-slate-200 transition shadow-2xs cursor-pointer"
-                    >
-                      <ArrowLeft className="w-3.5 h-3.5" />
-                      <span>Start Another Inspection</span>
-                    </button>
-
-                    <div className="text-xs text-slate-500 font-mono">
-                      ACTIVE REPORT:{" "}
-                      <span className="text-blue-600 font-bold">
-                        {selectedInspection.ncr.reportNumber}
-                      </span>
-                    </div>
-                  </div>
-                )}
-
-                {analysisError && (
-                  <div className="p-4 rounded-xl bg-red-50 border border-red-200 text-red-700 text-xs flex items-center justify-between gap-3 shadow-2xs">
-                    <div className="flex items-center gap-2">
-                      <AlertCircle className="w-4 h-4 text-red-500 flex-shrink-0" />
-                      <span>{analysisError}</span>
-                    </div>
-                    <button
-                      onClick={() => setAnalysisError(null)}
-                      className="text-red-600 font-semibold hover:underline cursor-pointer text-[11px]"
-                    >
-                      Dismiss
-                    </button>
-                  </div>
-                )}
-
-                {!selectedInspection ? (
-                  <InspectionForm
-                    onAnalyze={handleAnalyze}
-                    isAnalyzing={isAnalyzing}
-                    analysisStep={analysisStep}
-                  />
+              <AnimatePresence mode="wait">
+                {activeView === "history" ? (
+                  <motion.div
+                    key="history"
+                    initial={{ opacity: 0, y: 8 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    exit={{ opacity: 0, y: -8 }}
+                    transition={{ duration: 0.2, ease: "easeInOut" }}
+                  >
+                    <InspectionHistory
+                      inspections={inspections}
+                      onSelectInspection={(inspection) => {
+                        setSelectedInspection(inspection);
+                        setActiveView("inspect");
+                      }}
+                      onDeleteInspection={handleDeleteInspection}
+                      onVoidInspection={handleVoidInspection}
+                      onStartNewInspection={handleStartNewInspection}
+                      isLoading={historyLoading}
+                    />
+                  </motion.div>
                 ) : (
-                  <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
-                    {/* Non-Conformance Report */}
-                    <div className="lg:col-span-7 space-y-6">
-                      <NCRView
-                        ncr={selectedInspection.ncr}
-                        imageUrl={selectedInspection.imageUrl}
-                        initialNotes={selectedInspection.initialNotes}
-                        onNewInspection={handleStartNewInspection}
-                        record={selectedInspection}
-                        onDispatchWorkOrder={handleDispatchWorkOrder}
-                        isDispatching={isDispatching}
-                        onVerifyInspection={handleVerifyInspection}
-                        verificationNotes={verificationNotes}
-                        onVerificationNotesChange={setVerificationNotes}
-                      />
-                    </div>
+                  <motion.div
+                    key="inspect"
+                    initial={{ opacity: 0, y: 8 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    exit={{ opacity: 0, y: -8 }}
+                    transition={{ duration: 0.2, ease: "easeInOut" }}
+                    className="space-y-6"
+                  >
+                    {/* Active Session Top Toolbar when inspection is active */}
+                    {selectedInspection && (
+                      <div className="flex items-center justify-between gap-4 pb-2 border-b border-slate-200">
+                        <button
+                          id="btn-back-to-new-inspection"
+                          onClick={handleStartNewInspection}
+                          className="inline-flex items-center gap-2 px-3 py-1.5 rounded-lg bg-white hover:bg-slate-100 text-slate-700 text-xs font-semibold border border-slate-200 transition shadow-2xs cursor-pointer"
+                        >
+                          <ArrowLeft className="w-3.5 h-3.5" />
+                          <span>Start Another Inspection</span>
+                        </button>
 
-                    {/* Multi-Turn Engineering Consultation */}
-                    <div className="lg:col-span-5">
-                      <InspectionChat
-                        ncr={selectedInspection.ncr}
-                        messages={selectedInspection.messages || []}
-                        onSendMessage={handleSendMessage}
-                        isSending={isSendingChat}
+                        <div className="text-xs text-slate-500 font-mono">
+                          ACTIVE REPORT:{" "}
+                          <span className="text-blue-600 font-bold">
+                            {selectedInspection.ncr.reportNumber}
+                          </span>
+                        </div>
+                      </div>
+                    )}
+
+                    {analysisError && (
+                      <div className="p-4 rounded-xl bg-red-50 border border-red-200 text-red-700 text-xs flex items-center justify-between gap-3 shadow-2xs">
+                        <div className="flex items-center gap-2">
+                          <AlertCircle className="w-4 h-4 text-red-500 flex-shrink-0" />
+                          <span>{analysisError}</span>
+                        </div>
+                        <button
+                          onClick={() => setAnalysisError(null)}
+                          className="text-red-600 font-semibold hover:underline cursor-pointer text-[11px]"
+                        >
+                          Dismiss
+                        </button>
+                      </div>
+                    )}
+
+                    {!selectedInspection ? (
+                      <InspectionForm
+                        onAnalyze={handleAnalyze}
+                        isAnalyzing={isAnalyzing}
+                        analysisStep={analysisStep}
                       />
-                    </div>
-                  </div>
+                    ) : (
+                      <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
+                        {/* Non-Conformance Report */}
+                        <div className="lg:col-span-7 space-y-6">
+                          <NCRView
+                            ncr={selectedInspection.ncr}
+                            imageUrl={selectedInspection.imageUrl}
+                            initialNotes={selectedInspection.initialNotes}
+                            onNewInspection={handleStartNewInspection}
+                            record={selectedInspection}
+                            onDispatchWorkOrder={handleDispatchWorkOrder}
+                            isDispatching={isDispatching}
+                          />
+                        </div>
+
+                        {/* Multi-Turn Engineering Consultation */}
+                        <div className="lg:col-span-5">
+                          <InspectionChat
+                            ncr={selectedInspection.ncr}
+                            messages={selectedInspection.messages || []}
+                            onSendMessage={handleSendMessage}
+                            isSending={isSendingChat}
+                          />
+                        </div>
+                      </div>
+                    )}
+                  </motion.div>
                 )}
-              </div>
+              </AnimatePresence>
             )}
           </div>
         </main>

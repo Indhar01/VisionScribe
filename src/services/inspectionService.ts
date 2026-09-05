@@ -6,6 +6,8 @@ import {
   deleteDoc,
   onSnapshot,
   query,
+  orderBy,
+  limit,
 } from "firebase/firestore";
 import { db } from "../firebase/config";
 import { InspectionRecord, ChatMessage, WorkOrderTicket } from "../types/inspection";
@@ -21,7 +23,8 @@ export function getUserInspectionsRef(userId: string) {
 }
 
 /**
- * Subscribe to the real-time list of historical inspections for the authenticated user
+ * Subscribe to the real-time list of historical inspections for the authenticated user,
+ * bounded by a query limit (50 most recent) to prevent unbounded read latency and scale costs.
  */
 export function subscribeToUserInspections(
   userId: string,
@@ -34,7 +37,8 @@ export function subscribeToUserInspections(
   }
 
   const colRef = getUserInspectionsRef(userId);
-  const q = query(colRef);
+  // Bounded query with server-side ordering and limit
+  const q = query(colRef, orderBy("createdAt", "desc"), limit(50));
 
   return onSnapshot(
     q,
@@ -133,6 +137,34 @@ export async function deleteInspectionRecord(
 
   const docRef = doc(db, "users", userId, "inspections", inspectionId);
   await deleteDoc(docRef);
+}
+
+/**
+ * Voids an inspection record preserving AS9100 Rev D & ISO 9001:2015 audit immutability.
+ * Rather than hard-deleting the evidence, it marks status as 'Voided', attaches an audit reason,
+ * and maintains the historical trace.
+ */
+export async function voidInspectionRecord(
+  userId: string,
+  inspectionId: string,
+  voidReason: string,
+  voidedBy?: string
+): Promise<void> {
+  if (!userId || !inspectionId) {
+    throw new Error("userId and inspectionId are required to void an inspection.");
+  }
+
+  const docRef = doc(db, "users", userId, "inspections", inspectionId);
+  const payload = sanitizePayload({
+    status: "Voided",
+    isVoided: true,
+    voidReason: voidReason || "Record superseded or cancelled under QA revision protocol.",
+    voidedAt: new Date().toISOString(),
+    voidedBy: voidedBy || "Certified Lead Inspector",
+    updatedAt: new Date().toISOString(),
+  });
+
+  await updateDoc(docRef, payload);
 }
 
 /**

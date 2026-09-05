@@ -36,15 +36,17 @@ VisionScribe is an enterprise-grade optical non-destructive evaluation (NDE) jou
   - Provides guidance on Liquid Penetrant (PT), Magnetic Particle (MT), Phased Array Ultrasonic (PAUT), Eddy Current (ET), and Radiography (RT) verification protocols.
 
 - **Resilient Multi-Model Fallback Ladder**:
-  - Server-side Gemini vision pipeline with an automated fallback ladder ordered by availability, low latency, and cluster independence:
-    1. `gemini-3.1-flash-lite` (Primary: ~2.5s latency, high capacity)
-    2. `gemini-3.8-flash` (Secondary: deep reasoning)
-    3. `gemini-3.6-flash` (Tertiary: general flash alternative)
-    4. `gemini-flash-latest` (Quaternary: dynamic alias)
-  - Automatically intercepts recoverable HTTP status codes (`503 UNAVAILABLE`, `429 RESOURCE_EXHAUSTED`, `404 NOT_FOUND`, `500 INTERNAL`) and transitions seamlessly to the next model.
+  - Server-side Gemini vision pipeline with an automated fallback ladder ordered by availability and latency per production directives:
+    1. `gemini-2.5-flash` (Primary: high-speed, deep multimodal reasoning)
+    2. `gemini-2.0-flash` (Secondary fallback: high availability and low latency)
+  - Automatically intercepts recoverable HTTP status codes (`503 UNAVAILABLE`, `429 RESOURCE_EXHAUSTED`, `404 NOT_FOUND`, `500 INTERNAL`) and transitions seamlessly to the next model in the ladder.
 
 - **Security & Data Isolation**:
   - Zero client-side API key exposure; all Gemini model queries execute through authenticated backend proxy endpoints (`/api/inspect`, `/api/chat`).
+  - **Firebase ID Token Bearer Authentication**: Backend endpoints enforce `verifyAuth` middleware using `firebase-admin` to verify cryptographic JWT tokens before invoking any LLM quota.
+  - **Sliding-Window Rate Limiting**: In-memory rate limiting throttles requests by user ID or IP (15 requests/min for inspection analysis; 30 requests/min for consultant chat).
+  - **ISO / AS9100 Audit Trail (Soft-Delete)**: Full support for immutable audit logs (`isVoided`, `status: "Voided"`, `voidReason`, `voidedAt`, `voidedBy`), ensuring compliance with aerospace regulatory retention mandates.
+  - **Client-Side Telemetry Optimization**: HTML5 canvas compression scales uploaded images under Firestore's 1 MiB document threshold while retaining critical defect morphology.
   - Owner-isolated Cloud Firestore persistence under `/users/{userId}/inspections/{id}` enforced by Firestore security rules (`request.auth.uid == userId`).
   - Strict payload sanitization stripping `undefined` fields before database operations.
   - Federated Google Authentication via Firebase Auth.
@@ -146,11 +148,11 @@ VisionScribe implements a structured agentic defense posture addressing the OWAS
 
 | Threat Zone | Identified Risk Scenario | Countermeasure Implemented |
 |---|---|---|
-| **Input Surfaces** | Malformed image encodings (e.g., SVG text, corrupted data URIs) or injection in notes. | Client-side HTML5 canvas rasterization, strict MIME whitelist (`image/png`, `image/jpeg`, `image/webp`), and server-side byte validation. |
-| **Planning & Reasoning** | Upstream model cluster contention (`503 UNAVAILABLE`) or deprecated model identifiers. | Automated 4-tier model fallback ladder with status-code inspection (`503`, `429`, `404`, `500`) and seamless retry logic. |
-| **Tool Execution** | Arbitrary command execution or SSRF via image uploads. | Pure server-side isolation with zero external command execution; API proxy handles all upstream LLM calls. |
-| **Memory & State** | Cross-user data leakage or corrupted Firestore document schemas. | Owner-bound document paths (`/users/{userId}/inspections/{id}`) enforced by Firestore rules (`request.auth.uid == userId`) and undefined-stripping sanitizers. |
-| **Inter-System Comm** | API key leakage or client-side token exposure. | Pure server-side key isolation (`process.env.GEMINI_API_KEY`) without client exposure. |
+| **Input Surfaces** | Malformed image encodings (e.g., SVG text, corrupted data URIs), payload size blowup exceeding Firestore 1 MiB limits, or injection in notes. | Client-side HTML5 canvas optimization and compression, strict MIME whitelist (`image/png`, `image/jpeg`, `image/webp`), and server-side byte length checks. |
+| **Planning & Reasoning** | Upstream model cluster contention (`503 UNAVAILABLE`, `429 RESOURCE_EXHAUSTED`) or latency degradation. | Automated fallback ladder (`gemini-2.5-flash` -> `gemini-2.0-flash`) with error code inspection and automated retry sequencing. |
+| **Tool & Endpoint Execution** | Unauthenticated curl invocation of Cloud Run endpoints burning Gemini quotas, or abusive endpoint flooding (DoS). | Mandatory Firebase ID Token Bearer verification (`verifyAuth` with `firebase-admin`) + sliding-window rate limiting (`createRateLimiter` at 15 req/min for inspect, 30 req/min for chat). |
+| **Memory & State** | Cross-user data leakage, unvalidated writes, or audit trail tampering/deletion violating AS9100/ISO 9001 compliance. | Owner-bound Firestore security rules (`request.auth.uid == userId`), undefined-stripping sanitizers, and AS9100 Rev D audit voiding (`voidInspectionRecord`) preserving immutable journals. |
+| **Inter-System Comm** | Gemini API key exposure or token leakage. | Pure server-side key isolation (`process.env.GEMINI_API_KEY`) via Express proxy routes; credentials never touch client bundles. |
 
 ---
 
