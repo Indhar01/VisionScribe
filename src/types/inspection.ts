@@ -1,76 +1,122 @@
-export type DispositionType =
-  | 'Scrap'
-  | 'Rework'
-  | 'Repair'
-  | 'Use-As-Is'
-  | 'Further Engineering Review';
+export type AerospaceProgram = 
+  | 'Airbus A350'
+  | 'Rolls-Royce Trent XWB'
+  | 'Bombardier Global 7500'
+  | 'Airbus A320neo'
+  | 'Rolls-Royce Pearl 15'
+  | 'General Aerospace';
 
-export interface NonConformanceReport {
-  reportNumber: string;
-  machineryPart: string;
-  affectedSubsystem: string;
-  defectClassification: string;
-  severityScore: number; // 1 to 5
-  severityLabel: string;
-  defectDescription: string;
+export type SeverityLevel = 'minor' | 'major' | 'critical';
+
+export type NCRStatus = 'draft' | 'open' | 'engineering_review' | 'disposition_approved' | 'closed';
+
+export type UserRole = 'inspector' | 'supervisor' | 'quality_lead' | 'chief_engineer' | 'auditor';
+
+export type VerificationStatus = 'pending' | 'approved' | 'rejected';
+
+export type ConfidenceEvaluation = 'HIGH' | 'MODERATE' | 'LOW';
+
+export interface SupervisorReview {
+  reviewedBy: string;
+  reviewerEmail?: string;
+  reviewedAt: string;
+  decision: 'approved' | 'rejected';
+  notes?: string;
+}
+
+export interface DefectCoordinates {
+  x: number; // percentage 0-100
+  y: number; // percentage 0-100
+  zone: string;
+}
+
+export interface GeminiAnalysis {
+  executiveSummary: string;
   rootCauseHypothesis: string;
-  recommendedAction: string;
-  disposition: DispositionType;
-  preventiveMeasures: string[];
-  standardsReferenced: string[];
-  safetyAdvisory?: string;
-  ataChapter?: string; // Aerospace/Turbine ATA chapter (e.g. "ATA 72 - Engine / Turbine")
-  ataDescription?: string; // One sentence describing how defect relates to ATA chapter
-  confidenceScore?: number; // Integer 0-100 percentage confidence
-  confidenceEvaluation?: 'HIGH' | 'MODERATE' | 'LOW';
-  inspectedAt: string;
-  modelUsed?: string;
+  fmeaScore: number;
+  severityAssessment: string;
+  containmentSteps: string[];
+  dispositionRecommendation: string;
+  suggestedReflections: string[];
 }
 
-export interface ChatMessage {
-  id: string;
-  role: 'user' | 'assistant';
-  content: string;
-  timestamp: string;
+export interface NCRData {
+  ncrNumber: string;
+  program: string;
+  discrepancyClassification: string;
+  d1_team?: string;
+  d2_problemDescription?: string;
+  d3_interimContainment?: string;
+  immediateContainmentD3?: string;
+  d4_rootCause?: string;
+  rootCauseAnalysisD4?: string;
+  d5_correctiveAction?: string;
+  permanentCorrectiveActionD5?: string;
+  d6_validationPlan?: string;
+  d7_preventiveAction?: string;
+  preventRecurrenceD7?: string;
+  d8_recognition?: string;
+  mrbDisposition?: string;
+  signOffAuthority?: string;
+  mrbAuthority?: string;
+  signOffDate?: string;
+  signedAt?: string;
+  signedBy?: string;
 }
 
-export interface WorkOrderTicket {
-  trackingId: string; // e.g., "WO-7842"
-  dispatchedAt: string;
-  dispatchedBy?: string;
-  assignedTeam: string;
-  priority: 'CRITICAL' | 'HIGH' | 'MEDIUM' | 'LOW';
-  estimatedLeadTime: string;
-  maintenanceNotes?: string;
-  status: 'DISPATCHED' | 'IN_PROGRESS' | 'COMPLETED';
-}
-
-export interface InspectionRecord {
+export interface InspectionEntry {
   id: string;
   userId: string;
-  userEmail?: string;
-  machineryPart: string;
-  subsystem: string;
-  initialNotes: string;
-  imageUrl: string;
-  ncr: NonConformanceReport;
-  messages: ChatMessage[];
-  status?: 'Pending Review' | 'Dispatched' | 'Resolved' | 'Voided';
-  workOrder?: WorkOrderTicket;
-  isVoided?: boolean;
-  voidReason?: string;
-  voidedAt?: string;
-  voidedBy?: string;
+  userEmail: string;
+  title: string;
+  program: AerospaceProgram;
+  facility: string;
+  coordinates?: string;
+  blueprintLocation?: DefectCoordinates;
+  partNumber?: string;
+  serialNumber?: string;
+  severity: SeverityLevel;
+  discrepancyText: string;
+  geminiReflection?: string;
+  analysis?: GeminiAnalysis;
+  ncrReport?: NCRData;
+  ncrStatus: NCRStatus;
+  verificationStatus?: VerificationStatus;
+  confidenceScore?: number; // INTEGER 0-100 constraint
+  confidenceEvaluation?: ConfidenceEvaluation; // 'HIGH' | 'MODERATE' | 'LOW'
+  supervisorReview?: SupervisorReview;
+  fmeaScore?: number;
+  imageUrl?: string;
+  tags?: string[];
   createdAt: string;
   updatedAt: string;
 }
 
-export interface SampleDefectPreset {
+export interface InteractionMessage {
   id: string;
-  title: string;
-  partName: string;
-  subsystem: string;
-  category: string;
-  notes: string;
-  image: string;
+  inspectionId: string;
+  userId: string;
+  role: 'user' | 'model' | 'system';
+  content: string;
+  timestamp: string;
+}
+
+export interface AuditLogEntry {
+  id: string;
+  userId: string;
+  action: string;
+  targetId?: string;
+  details: string;
+  hash: string;
+  timestamp: string;
+}
+
+export interface UserProfile {
+  uid: string;
+  email: string | null;
+  displayName: string | null;
+  photoURL: string | null;
+  role: UserRole;
+  facilityBadge: string;
+  isDemo?: boolean;
 }

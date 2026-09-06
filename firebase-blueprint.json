@@ -1,0 +1,96 @@
+{
+  "entities": {
+    "UserProfile": {
+      "title": "UserProfile",
+      "description": "User profile document containing authentication and role metadata (inspector or supervisor).",
+      "type": "object",
+      "properties": {
+        "uid": { "type": "string", "maxLength": 128 },
+        "email": { "type": "string", "maxLength": 256 },
+        "displayName": { "type": "string", "maxLength": 256 },
+        "role": { "type": "string", "enum": ["inspector", "supervisor", "quality_lead", "chief_engineer", "auditor"] },
+        "facilityBadge": { "type": "string", "maxLength": 64 },
+        "createdAt": { "type": "string", "maxLength": 64 },
+        "updatedAt": { "type": "string", "maxLength": 64 }
+      },
+      "required": ["uid", "role"]
+    },
+    "InspectionEntry": {
+      "title": "InspectionEntry",
+      "description": "Aerospace quality inspection journal entry and non-conformance observation record.",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string", "maxLength": 128 },
+        "userId": { "type": "string", "maxLength": 128 },
+        "userEmail": { "type": "string", "maxLength": 256 },
+        "title": { "type": "string", "maxLength": 256 },
+        "program": { "type": "string", "enum": ["Airbus A350", "Rolls-Royce Trent XWB", "Bombardier Global 7500", "Airbus A320neo", "Rolls-Royce Pearl 15", "General Aerospace"] },
+        "facility": { "type": "string", "maxLength": 128 },
+        "coordinates": { "type": "string", "maxLength": 128 },
+        "partNumber": { "type": "string", "maxLength": 64 },
+        "serialNumber": { "type": "string", "maxLength": 64 },
+        "severity": { "type": "string", "enum": ["minor", "major", "critical"] },
+        "discrepancyText": { "type": "string", "maxLength": 5000 },
+        "geminiReflection": { "type": "string", "maxLength": 10000 },
+        "rootCauseAnalysis": { "type": "string", "maxLength": 5000 },
+        "correctiveActions": { "type": "string", "maxLength": 5000 },
+        "ncrStatus": { "type": "string", "enum": ["draft", "open", "engineering_review", "disposition_approved", "closed"] },
+        "verificationStatus": { "type": "string", "enum": ["pending", "approved", "rejected"] },
+        "confidenceScore": { "type": "integer", "minimum": 0, "maximum": 100 },
+        "confidenceEvaluation": { "type": "string", "enum": ["HIGH", "MODERATE", "LOW"] },
+        "fmeaScore": { "type": "number" },
+        "tags": { "type": "array", "items": { "type": "string" } },
+        "createdAt": { "type": "string", "maxLength": 64 },
+        "updatedAt": { "type": "string", "maxLength": 64 }
+      },
+      "required": ["id", "userId", "title", "program", "discrepancyText", "severity", "createdAt"]
+    },
+    "Interaction": {
+      "title": "Interaction",
+      "description": "Multi-turn conversational messages between inspector and Gemini AI engine regarding an inspection entry.",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string", "maxLength": 128 },
+        "inspectionId": { "type": "string", "maxLength": 128 },
+        "userId": { "type": "string", "maxLength": 128 },
+        "role": { "type": "string", "enum": ["user", "model", "system"] },
+        "content": { "type": "string", "maxLength": 10000 },
+        "timestamp": { "type": "string", "maxLength": 64 }
+      },
+      "required": ["id", "inspectionId", "userId", "role", "content", "timestamp"]
+    },
+    "AuditLog": {
+      "title": "AuditLog",
+      "description": "Immutable cryptographic audit trail record for AS9100 quality compliance.",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string", "maxLength": 128 },
+        "userId": { "type": "string", "maxLength": 128 },
+        "action": { "type": "string", "maxLength": 128 },
+        "targetId": { "type": "string", "maxLength": 128 },
+        "details": { "type": "string", "maxLength": 1000 },
+        "hash": { "type": "string", "maxLength": 128 },
+        "timestamp": { "type": "string", "maxLength": 64 }
+      },
+      "required": ["id", "userId", "action", "timestamp"]
+    }
+  },
+  "firestore": {
+    "/users/{userId}": {
+      "schema": { "$ref": "#/entities/UserProfile" },
+      "description": "User profile document defining identity and role metadata."
+    },
+    "/users/{userId}/inspections/{inspectionId}": {
+      "schema": { "$ref": "#/entities/InspectionEntry" },
+      "description": "User-isolated aerospace inspection logs and non-conformance journals."
+    },
+    "/users/{userId}/interactions/{interactionId}": {
+      "schema": { "$ref": "#/entities/Interaction" },
+      "description": "User-isolated multi-turn conversational interactions with Gemini AI."
+    },
+    "/users/{userId}/auditLogs/{logId}": {
+      "schema": { "$ref": "#/entities/AuditLog" },
+      "description": "Tamper-evident audit log records for aerospace compliance."
+    }
+  }
+}

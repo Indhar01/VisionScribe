@@ -1,24 +1,75 @@
 rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
-    match /users/{userId} {
-      allow read, write: if request.auth != null && request.auth.uid == userId;
 
+    // Helper functions for security and authentication verification
+    function isSignedIn() {
+      return request.auth != null;
+    }
+
+    function isOwner(userId) {
+      return isSignedIn() && request.auth.uid == userId;
+    }
+
+    function isValidId(id) {
+      return id is string && id.size() > 0 && id.size() <= 128;
+    }
+
+    // Role-Based dynamic lookup for Supervisor access
+    function isSupervisor() {
+      return isSignedIn() && 
+        exists(/databases/$(database)/documents/users/$(request.auth.uid)) &&
+        get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'supervisor';
+    }
+
+    // Default deny all access
+    match /{document=**} {
+      allow read, write: if false;
+    }
+
+    // User profile document - Self-Escalation Prevention Enforced
+    match /users/{userId} {
+      // User can read their own profile; supervisors can view profiles for audit verification
+      allow read: if isOwner(userId) || isSupervisor();
+
+      // New users default to 'inspector' role only
+      allow create: if isOwner(userId) && 
+        (!('role' in request.resource.data) || request.resource.data.role == 'inspector');
+
+      // Prevent self-promotion: existing users cannot mutate their own 'role' field
+      allow update: if isOwner(userId) && 
+        (!('role' in request.resource.data) || request.resource.data.role == resource.data.role);
+
+      allow delete: if false;
+
+      // User's inspection journal & NCR documents
       match /inspections/{inspectionId} {
-        allow read, write: if request.auth != null && request.auth.uid == userId;
+        // Owner or authorized supervisor can read
+        allow read: if isOwner(userId) || isSupervisor();
+
+        // Inspectors can create/update/delete their own findings
+        allow create, delete: if isOwner(userId) && isValidId(inspectionId);
+
+        // Owner can update their inspection; supervisor can review & approve/reject
+        allow update: if isValidId(inspectionId) && (isOwner(userId) || isSupervisor());
       }
 
-      match /auditTrail/{auditId} {
-        allow read: if request.auth != null && request.auth.uid == userId;
-        allow write: if request.auth != null && request.auth.uid == userId && request.resource.data.userId == userId;
-        allow delete: if false; // Audit trail is immutable - never allow deletion
+      // User's multi-turn interactions & Gemini reflections
+      match /interactions/{interactionId} {
+        allow read, write: if isOwner(userId) && isValidId(interactionId);
+      }
+
+      // User's tamper-evident audit logs
+      match /auditLogs/{logId} {
+        allow read: if isOwner(userId) || isSupervisor();
+        allow create: if isOwner(userId) && isValidId(logId);
+        allow update, delete: if false;
       }
     }
 
-    // Global audit trail (for analytics/compliance)
-    match /auditLog/{auditId} {
-      allow read: if false; // Only backend service account can read
-      allow write: if false; // Only backend service account can write
+    // Collection group rule: Allows supervisors to perform cross-user review queue queries
+    match /{path=**}/inspections/{inspectionId} {
+      allow read: if isSupervisor();
     }
   }
 }

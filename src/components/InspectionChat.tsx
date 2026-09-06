@@ -1,243 +1,287 @@
-import React, { useState, useRef, useEffect } from "react";
-import {
-  ChatMessage,
-  NonConformanceReport,
-} from "../types/inspection";
-import {
-  MessageSquare,
-  Send,
-  Bot,
-  User as UserIcon,
-  Sparkles,
-  HelpCircle,
-  AlertCircle,
-} from "lucide-react";
+import React, { useState, useEffect, useRef } from 'react';
+import { 
+  Send, 
+  Sparkles, 
+  User, 
+  Cpu, 
+  HelpCircle, 
+  CheckCircle2, 
+  Layers, 
+  Plane, 
+  ShieldAlert,
+  CornerDownLeft,
+  Flame,
+  Zap,
+  ArrowRight
+} from 'lucide-react';
+import { 
+  InspectionEntry, 
+  InteractionMessage, 
+  UserProfile 
+} from '../types/inspection';
+import { 
+  requestGeminiChat, 
+  saveInteractionMessage, 
+  getInspectionInteractions 
+} from '../services/inspectionService';
+import { generateDemoChatReply } from '../utils/mockAiResponses';
 
 interface InspectionChatProps {
-  ncr: NonConformanceReport;
-  messages: ChatMessage[];
-  onSendMessage: (text: string) => Promise<void>;
-  isSending: boolean;
+  user: UserProfile;
+  inspection: InspectionEntry;
+  onClose?: () => void;
 }
 
-const QUICK_PROMPTS = [
-  "What NDT method should we use to measure crack depth?",
-  "Is weld overlay repair permissible under ASME code?",
-  "What is the step-by-step LOTO containment procedure?",
-  "Draft a supplier non-conformance notification letter.",
-];
-
 export const InspectionChat: React.FC<InspectionChatProps> = ({
-  ncr,
-  messages,
-  onSendMessage,
-  isSending,
+  user,
+  inspection,
+  onClose,
 }) => {
-  const [inputText, setInputText] = useState("");
-  const [errorMsg, setErrorMsg] = useState<string | null>(null);
+  const [messages, setMessages] = useState<InteractionMessage[]>([]);
+  const [inputText, setInputText] = useState('');
+  const [sending, setSending] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
-  const scrollToBottom = () => {
-    messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
-  };
-
+  // Load past interactions for this inspection
   useEffect(() => {
-    scrollToBottom();
-  }, [messages, isSending]);
+    let isMounted = true;
+    async function loadChat() {
+      const stored = await getInspectionInteractions(user.uid, inspection.id);
+      if (isMounted) {
+        if (stored.length > 0) {
+          setMessages(stored);
+        } else {
+          // Initialize with greeting & context
+          const initialGreeting: InteractionMessage = {
+            id: `INT-INIT-${Date.now()}`,
+            inspectionId: inspection.id,
+            userId: user.uid,
+            role: 'model',
+            content: `Hello Inspector. I am VisionScribe, your Aerospace Engineering AI Copilot. I have loaded active inspection record **${inspection.title}** (${inspection.program}, Severity: **${inspection.severity.toUpperCase()}**).\n\nHow would you like to proceed? We can explore **5-Why Root Cause**, draft **SRM Concession language**, or review **OEM Containment Protocols**.`,
+            timestamp: new Date().toISOString(),
+          };
+          setMessages([initialGreeting]);
+          saveInteractionMessage(initialGreeting);
+        }
+      }
+    }
+    loadChat();
+    return () => {
+      isMounted = false;
+    };
+  }, [inspection.id, user.uid]);
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!inputText.trim() || isSending) return;
+  // Scroll to bottom
+  useEffect(() => {
+    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+  }, [messages, sending]);
 
-    const query = inputText.trim();
-    setInputText("");
-    setErrorMsg(null);
+  const handleSend = async (customPrompt?: string) => {
+    const textToSend = customPrompt || inputText;
+    if (!textToSend.trim() || sending) return;
+
+    const userMsg: InteractionMessage = {
+      id: `INT-${Date.now()}-${Math.random().toString(36).substr(2, 4)}`,
+      inspectionId: inspection.id,
+      userId: user.uid,
+      role: 'user',
+      content: textToSend,
+      timestamp: new Date().toISOString(),
+    };
+
+    const newMessages = [...messages, userMsg];
+    setMessages(newMessages);
+    setInputText('');
+    setSending(true);
 
     try {
-      await onSendMessage(query);
+      await saveInteractionMessage(userMsg);
+
+      if (user.isDemo) {
+        // Safe offline simulated reply (never calls server.ts or real Gemini API)
+        const demoReply = generateDemoChatReply(textToSend, inspection);
+        const aiMsg: InteractionMessage = {
+          id: `INT-${Date.now()}-${Math.random().toString(36).substr(2, 4)}`,
+          inspectionId: inspection.id,
+          userId: user.uid,
+          role: 'model',
+          content: demoReply.reply,
+          timestamp: new Date().toISOString(),
+        };
+        setMessages((prev) => [...prev, aiMsg]);
+        await saveInteractionMessage(aiMsg);
+        return;
+      }
+
+      // Map to Gemini history format
+      const chatHistory = newMessages.map((m) => ({
+        role: (m.role === 'model' ? 'model' : 'user') as 'user' | 'model',
+        content: m.content,
+      }));
+
+      const result = await requestGeminiChat(chatHistory, inspection);
+
+      const aiMsg: InteractionMessage = {
+        id: `INT-${Date.now()}-${Math.random().toString(36).substr(2, 4)}`,
+        inspectionId: inspection.id,
+        userId: user.uid,
+        role: 'model',
+        content: result.reply,
+        timestamp: new Date().toISOString(),
+      };
+
+      setMessages((prev) => [...prev, aiMsg]);
+      await saveInteractionMessage(aiMsg);
     } catch (err: any) {
-      console.error("Chat message error:", err);
-      setErrorMsg(err?.message || "Failed to submit message to engineering consultant.");
+      console.error('Chat error:', err);
+      const errorMsg: InteractionMessage = {
+        id: `INT-ERR-${Date.now()}`,
+        inspectionId: inspection.id,
+        userId: user.uid,
+        role: 'model',
+        content: `Engineering Assistant Notice: Encountered temporary processing exception (${err?.message || 'Error'}). Please try again.`,
+        timestamp: new Date().toISOString(),
+      };
+      setMessages((prev) => [...prev, errorMsg]);
+    } finally {
+      setSending(false);
     }
   };
 
-  const handlePromptClick = (prompt: string) => {
-    setInputText(prompt);
-  };
+  const quickPrompts = [
+    'What are the AS9100 Rev D containment requirements for this finding?',
+    'Perform a 5-Why root cause breakdown on this assembly failure.',
+    'Draft an engineering concession proposal for Material Review Board (MRB) approval.',
+    'What Non-Destructive Inspection (NDI) technique should we verify on adjacent serial units?',
+  ];
 
   return (
-    <div className="bg-white border border-[#1c1c1a]/15 flex flex-col h-[580px]">
-      {/* Header */}
-      <div className="p-4 border-b border-[#1c1c1a]/10 bg-[#fafafa] flex items-center justify-between">
-        <div className="flex items-center space-x-3">
-          <div className="w-8 h-8 bg-blue-50 border border-blue-200 flex items-center justify-center text-[#2563eb]">
-            <MessageSquare className="w-4 h-4" />
+    <div className="rounded-lg border border-gray-200 bg-white shadow-sm flex flex-col h-[650px] overflow-hidden">
+      
+      {/* Header with Active Inspection Context */}
+      <div className="border-b border-gray-200 bg-gray-50/90 px-4 py-3 flex items-center justify-between">
+        <div className="flex items-center gap-2.5">
+          <div className="p-1.5 rounded bg-blue-600 text-white font-bold shadow-xs">
+            <Sparkles className="h-4 w-4" />
           </div>
           <div>
-            <h3 className="font-serif-display font-semibold italic text-base text-[#1c1c1a] flex items-center gap-2">
-              <span>Interactive Engineering Consultation</span>
-              <span className="font-mono-code text-[10px] bg-[#1c1c1a] text-white px-1.5 py-0.2 font-normal not-italic">
-                Multi-Turn
+            <div className="flex items-center gap-1.5">
+              <h3 className="text-xs font-bold text-gray-900 uppercase tracking-tight">Gemini 3.6 Flash Engineering Copilot</h3>
+              <span className="rounded bg-blue-50 px-1.5 py-0.2 font-mono text-[9px] text-blue-700 border border-blue-200 font-bold uppercase">
+                Multi-Turn Active
               </span>
-            </h3>
-            <p className="font-mono-code text-[11px] text-[#1c1c1a]/60">
-              Grounded in {ncr.reportNumber} • {ncr.machineryPart}
+            </div>
+            <p className="text-[10px] text-gray-500 truncate max-w-lg font-mono">
+              Context: <span className="text-gray-800 font-semibold">{inspection.title}</span> ({inspection.program})
             </p>
           </div>
         </div>
 
-        <div className="text-xs text-[#1c1c1a]/60 hidden sm:flex items-center gap-1.5 font-mono-code">
-          <Sparkles className="w-3.5 h-3.5 text-[#2563eb]" />
-          <span>NDT & Metallurgy Assistant</span>
-        </div>
+        {onClose && (
+          <button
+            onClick={onClose}
+            className="text-[10px] font-mono font-bold uppercase text-gray-600 hover:text-gray-900 px-2.5 py-1 rounded border border-gray-300 bg-white hover:bg-gray-50 transition-all"
+          >
+            Back to Journal
+          </button>
+        )}
       </div>
 
-      {/* Message Stream */}
-      <div className="flex-1 overflow-y-auto p-4 sm:p-6 space-y-4 bg-[#f8f7f4]">
-        {messages.length === 0 ? (
-          <div className="h-full flex flex-col items-center justify-center text-center max-w-md mx-auto p-4">
-            <div className="w-12 h-12 bg-white border border-[#1c1c1a]/15 flex items-center justify-center text-[#2563eb] mb-3">
-              <Bot className="w-6 h-6" />
-            </div>
-            <h4 className="font-serif-display text-xl font-semibold italic text-[#1c1c1a]">
-              Consult with VisionScribe Specialist
-            </h4>
-            <p className="text-xs text-[#1c1c1a]/70 mt-1 leading-relaxed">
-              Ask technical follow-up questions regarding Non-Destructive Testing (NDT) procedures,
-              metallurgical root cause analysis, or repair protocols for this specific non-conformance.
-            </p>
-
-            {/* Quick Prompts */}
-            <div className="w-full mt-6 space-y-2 text-left">
-              <div className="label-mono flex items-center gap-1">
-                <HelpCircle className="w-3 h-3 text-[#2563eb]" />
-                <span>Suggested Technical Queries</span>
+      {/* Messages Container */}
+      <div className="flex-1 overflow-y-auto p-4 space-y-3 bg-[#FAFAFA]">
+        {messages.map((msg) => {
+          const isUser = msg.role === 'user';
+          return (
+            <div
+              key={msg.id}
+              className={`flex items-start gap-2.5 ${isUser ? 'flex-row-reverse' : 'flex-row'}`}
+            >
+              {/* Avatar */}
+              <div className={`flex-shrink-0 h-7 w-7 rounded flex items-center justify-center font-bold text-xs ${
+                isUser 
+                  ? 'bg-blue-600 text-white' 
+                  : 'bg-white border border-gray-300 text-gray-700 shadow-xs'
+              }`}>
+                {isUser ? <User className="h-3.5 w-3.5" /> : <Cpu className="h-3.5 w-3.5 text-blue-600" />}
               </div>
-              <div className="grid grid-cols-1 gap-1.5">
-                {QUICK_PROMPTS.map((prompt, idx) => (
-                  <button
-                    key={idx}
-                    type="button"
-                    onClick={() => handlePromptClick(prompt)}
-                    className="text-left font-mono-code text-xs px-3 py-2 bg-white hover:bg-[#fafafa] border border-[#1c1c1a]/15 text-[#1c1c1a] hover:border-[#1c1c1a] transition cursor-pointer"
-                  >
-                    "{prompt}"
-                  </button>
-                ))}
-              </div>
-            </div>
-          </div>
-        ) : (
-          messages.map((msg) => {
-            const isUser = msg.role === "user";
-            return (
-              <div
-                key={msg.id}
-                className={`flex gap-3 ${isUser ? "justify-end" : "justify-start"}`}
-              >
-                {!isUser && (
-                  <div className="w-7 h-7 bg-white text-[#2563eb] flex items-center justify-center flex-shrink-0 mt-0.5 border border-[#1c1c1a]/15">
-                    <Bot className="w-4 h-4" />
-                  </div>
-                )}
 
-                <div
-                  className={`max-w-[85%] sm:max-w-[75%] p-3.5 text-xs sm:text-sm leading-relaxed border ${
-                    isUser
-                      ? "bg-[#1c1c1a] text-white border-[#1c1c1a]"
-                      : "bg-white border-[#1c1c1a]/15 text-[#1c1c1a] whitespace-pre-line"
-                  }`}
-                >
-                  <div className="flex items-center justify-between gap-4 mb-1 font-mono-code text-[10px] opacity-75">
-                    <span className="font-bold uppercase tracking-wider">
-                      {isUser ? "Lead Quality Inspector" : "VisionScribe Specialist"}
-                    </span>
-                    <span>
-                      {new Date(msg.timestamp).toLocaleTimeString([], {
-                        hour: "2-digit",
-                        minute: "2-digit",
-                      })}
-                    </span>
-                  </div>
-                  <div className={isUser ? "text-slate-100" : "text-[#1c1c1a]"}>{msg.content}</div>
+              {/* Message Bubble */}
+              <div className={`max-w-[85%] sm:max-w-[75%] rounded-lg p-3 text-xs leading-relaxed ${
+                isUser
+                  ? 'bg-blue-600 text-white shadow-xs rounded-tr-none'
+                  : 'bg-white border border-gray-200 text-gray-900 rounded-tl-none font-mono text-[11px] whitespace-pre-wrap shadow-xs'
+              }`}>
+                <div className={`flex items-center justify-between gap-4 mb-1 text-[9px] font-mono ${
+                  isUser ? 'text-blue-100' : 'text-gray-400'
+                }`}>
+                  <span className="font-bold">{isUser ? user.displayName || 'Inspector' : 'VisionScribe AI'}</span>
+                  <span>{new Date(msg.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</span>
                 </div>
-
-                {isUser && (
-                  <div className="w-7 h-7 bg-[#1c1c1a] text-white flex items-center justify-center flex-shrink-0 mt-0.5 border border-[#1c1c1a]">
-                    <UserIcon className="w-3.5 h-3.5" />
-                  </div>
-                )}
+                <div>{msg.content}</div>
               </div>
-            );
-          })
-        )}
-
-        {isSending && (
-          <div className="flex gap-3 justify-start">
-            <div className="w-7 h-7 bg-white text-[#2563eb] flex items-center justify-center flex-shrink-0 border border-[#1c1c1a]/15">
-              <Bot className="w-4 h-4" />
             </div>
-            <div className="bg-white border border-[#1c1c1a]/15 p-3.5 font-mono-code text-xs text-[#1c1c1a]/70 flex items-center gap-2">
-              <div className="w-3.5 h-3.5 border-2 border-[#2563eb] border-t-transparent rounded-full animate-spin" />
-              <span>Analyzing metallurgical tolerances & formulating engineering guidance...</span>
-            </div>
-          </div>
-        )}
+          );
+        })}
 
-        {errorMsg && (
-          <div className="p-3 bg-red-50 border border-red-200 text-red-800 font-mono-code text-xs flex items-center gap-2">
-            <AlertCircle className="w-4 h-4 text-red-600 flex-shrink-0" />
-            <span>{errorMsg}</span>
+        {sending && (
+          <div className="flex items-start gap-2.5">
+            <div className="h-7 w-7 rounded bg-white border border-gray-300 text-blue-600 flex items-center justify-center shadow-xs">
+              <Cpu className="h-3.5 w-3.5 animate-spin" />
+            </div>
+            <div className="rounded-lg rounded-tl-none bg-white border border-gray-200 p-2.5 text-xs text-gray-500 font-mono flex items-center gap-2 shadow-xs">
+              <Sparkles className="h-3.5 w-3.5 text-blue-600 animate-pulse" />
+              <span className="text-[11px]">Gemini 3.6 Flash reasoning over AS9100 quality guidelines...</span>
+            </div>
           </div>
         )}
 
         <div ref={messagesEndRef} />
       </div>
 
-      {/* Suggested chips row when messages exist */}
-      {messages.length > 0 && (
-        <div className="px-4 py-2 bg-[#fafafa] border-t border-[#1c1c1a]/10 flex items-center gap-2 overflow-x-auto text-xs text-[#1c1c1a]/70 no-scrollbar">
-          <span className="label-mono whitespace-nowrap">
-            Suggested:
-          </span>
-          {QUICK_PROMPTS.map((prompt, idx) => (
+      {/* Suggested Quick Prompt Chips */}
+      <div className="border-t border-gray-200 bg-white p-2">
+        <div className="flex items-center gap-1.5 overflow-x-auto pb-0.5 scrollbar-none">
+          <span className="text-[9px] font-mono font-bold uppercase text-gray-400 flex-shrink-0">Quick Prompts:</span>
+          {quickPrompts.map((q, idx) => (
             <button
               key={idx}
-              type="button"
-              onClick={() => handlePromptClick(prompt)}
-              className="px-2.5 py-1 font-mono-code bg-white hover:bg-[#fafafa] text-[#1c1c1a] hover:border-[#1c1c1a] border border-[#1c1c1a]/15 whitespace-nowrap transition text-xs cursor-pointer"
+              onClick={() => handleSend(q)}
+              disabled={sending}
+              className="text-[10px] font-mono text-gray-700 bg-gray-50 hover:bg-blue-50 hover:text-blue-700 border border-gray-200 hover:border-blue-300 px-2 py-0.5 rounded flex-shrink-0 transition-all text-left truncate max-w-xs"
             >
-              {prompt}
+              {q}
             </button>
           ))}
         </div>
-      )}
+      </div>
 
       {/* Input Box */}
-      <form
-        onSubmit={handleSubmit}
-        className="p-3 bg-white border-t border-[#1c1c1a]/10 flex items-center gap-2"
-      >
-        <input
-          type="text"
-          id="input-chat-query"
-          value={inputText}
-          onChange={(e) => setInputText(e.target.value)}
-          disabled={isSending}
-          placeholder="Ask about NDT methods, welding procedures, ASME/ISO standards..."
-          className="flex-1 border border-[#1c1c1a]/20 px-3.5 py-2 font-mono-code text-xs text-[#1c1c1a] placeholder-[#1c1c1a]/40 focus:border-[#2563eb] focus:outline-none bg-white transition"
-        />
-        <button
-          type="submit"
-          id="btn-send-chat"
-          disabled={!inputText.trim() || isSending}
-          className="p-2.5 bg-[#1c1c1a] hover:bg-[#1c1c1a]/90 text-white transition disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer flex-shrink-0"
-          title="Send consultation query"
+      <div className="border-t border-gray-200 bg-white p-3">
+        <form
+          onSubmit={(e) => {
+            e.preventDefault();
+            handleSend();
+          }}
+          className="flex items-center gap-2"
         >
-          <Send className="w-4 h-4 text-[#2563eb]" />
-        </button>
-      </form>
+          <input
+            type="text"
+            value={inputText}
+            onChange={(e) => setInputText(e.target.value)}
+            placeholder="Ask Gemini regarding repair dispositions, FMEA scoring, or FAA regulations..."
+            className="flex-1 rounded border border-gray-300 bg-white px-3 py-2 text-xs text-gray-900 placeholder-gray-400 focus:border-blue-600 focus:outline-none focus:ring-1 focus:ring-blue-600 font-mono"
+            disabled={sending}
+          />
+          <button
+            type="submit"
+            disabled={!inputText.trim() || sending}
+            className="flex h-9 w-9 items-center justify-center rounded bg-blue-600 text-white hover:bg-blue-700 transition-all shadow-xs disabled:opacity-40"
+          >
+            <Send className="h-3.5 w-3.5" />
+          </button>
+        </form>
+      </div>
+
     </div>
   );
 };
-

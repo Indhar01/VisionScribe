@@ -1,36 +1,134 @@
-import { SampleDefectPreset } from "../types/inspection";
+import { InspectionEntry } from '../types/inspection';
 
-// Pre-rasterized Base64 PNG industrial telemetry images (Gemini Multimodal Compatible)
-const turbineBladePng = "data:image/png;base64,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";
-const bearingRacePng = "data:image/png;base64,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";
-const pumpCavitationPng = "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAUAAAADwCAIAAAD+Tyo8AAAFIElEQVR42u3dzWrbQBSGYa9LQaX0ArrsunfV++sFtiXgBuP4TxppvnMeeAlBWSXkYTRzZPv07esXSaGd/AkkgCUBLAlgCWBJAEsCWBLAEsCSAJYEsASwJIAlASwJYAlgSQBLAlgSwBLAkgCWBLAEsCSAJQEs6Q7g37+WG/kDScGAkZZKAeZZqgOYZ6kOYJilIoBhlooAhlkqAhhmqQhgmKUigEmWKgCGWSoCmGSpAmCSpQqASZYqACZZqgCYZAG8kCwBTLIEMMkSwCQLYJIlgEmWACZZAhhjAUyyBDDJEsAYC2CRLIAxlgAmWQKYZAEsjAUwxhLAJEsAYyyARbIAxlgCmGQBLIwFsDAWwCRLAGMsgIWxABbGAphkASyMBbAwFsDCWACTLICFsQAWxgJYGAtgjAWwSBbAwlgAC2OAhbEAFsYCWBgLYGEMsDAWwMJYAAtjASyMARbGAlgkC2BhDLCEMcDCWOMB3/6xf01hHAwYaWFcCjDPwrgOYJ7FcB3AMAvjIoBhFsZFAMMsjIsAhhljFQEMM8YqAphkjFUBMMwYqwhgkjFWBcAkY6wKgEnGWBUAk4yxTpV+Gf/xGANMsp7r54/vy+dPb/39/tzViwwDTPIUnX2+FsYAk3zMevvUknv3IsYAk7zfqvte4Pn7lRetxgCTvMdG9+LrthcxBpjkPfSOw+yIC2CStz+p2upW+cGLGAOM8ZbnzOtPqp69yDDAJB85JVqfBz8AJnnVrGjPJXfDdbgVY4Ax/nDSu8+O9/ZFj2ECTPJ0E6Ohs6VWjAHG+JiJ0ejZUhPGAJN8/UGrGe6fX37cso9hgEm+Avjw46uVz0v3YQwwxrPMjQZNlWozBhjjIa8xmn8drsEYYJIvAc+5DR4EOJ0xwBj/3/3Oc/I89Di6kmGASV4md/v+q/ffAhjjyPvncdvgaMYAk7zMf3y1ydPRJRkD3J3x5NOjHeZJ0YYB7s548iV325co1WMMcHfJM+94D9wGpzAGuDvj+U+eLy76mAiAMf5wBZ4fs496ARjj4W/1PO1L/IsxBri75KDjqxluoWdjDHB3xsZI0YwB7s7YGCnaMMDdGRsjRTMGuLtkY6RoxgB3Z2yMFG0Y4O6MjZGiGQPcnbExUjRjgLszNkaKZgwwyUvQGCn6XXsB1hDGQdvgAm++DbA2Zhw0RirzIRgAa0vGEWOkYh9DBbA2Y+z+OZQxwPqXp6BDGQOsK4xNj1IMA6wrjGdbh8vrfZkxwLrDeIZtcB/AzzIGWLfq8HEq0YYB1hOM98fcU+/jjAHW1DfVzQHfZQywXjys9sKjGQwDrElnTtA+whhgrd0ej1iHWX2QMcDajPFW22BEHzcMsIaccpkY7cMYYA1hbGK0TwDr+JtqDgFW6iucIARYedMm9gBW3vkWcgCryHtxCWBhDLCEMcASxgALYwEsjAGWMAZYwhhgYSyAhTHAEsMASxgDLIwBljAGWMIYYAljgIUxwBLDAEsYAyxhDLAwBljCGGAJY4ClZoYBFsYASxgDLGEMsNSFMcBSsGGApWDGAEvBjAGWghkDLAUbBlgKZgywFMwYYCmYMcBSsGGApWDGAEvBjAGWghkDLAUbBlgKZgywFMwYYCnYMMBSMGOApWDGAEvBjAGWgg0DLAUzBlgKZgywFGwYYCmYMcBSMGOApWDDAEvBjAGWghkDLAUbBlgKZgywFMwYYCnYMMBSMGOApWDGAEvBhgGWghkDLAUHsASwJIAlASwBLGn6/gA+rDgvADKyUgAAAABJRU5ErkJggg==";
-
-export const SAMPLE_DEFECT_PRESETS: SampleDefectPreset[] = [
+export const SAMPLE_AEROSPACE_DEFECTS: Omit<InspectionEntry, 'id' | 'userId' | 'userEmail' | 'createdAt' | 'updatedAt'>[] = [
   {
-    id: "sample-turbine-blade",
-    title: "Gas Turbine Blade Thermal Fatigue Crack",
-    partName: "Inconel 718 High-Pressure Turbine Stage-1 Rotor Blade",
-    subsystem: "Thermal Hot-Gas Combustion Path",
-    category: "Aerospace / Energy",
-    notes: "Detected during 12,000-hr borescope inspection. Visual discoloration ring with radial crack propagation along leading edge camber. Operating peak gas temperature 1,180°C.",
-    image: turbineBladePng,
+    title: 'CFRP Main Wing Spar Inter-laminar Delamination at Rib-14 Attachment',
+    program: 'Airbus A350',
+    facility: 'Toulouse Final Assembly Line (Clément Ader)',
+    coordinates: '43.6291° N, 1.3638° E',
+    blueprintLocation: { x: 38, y: 44, zone: 'Port Wing Center Spar - Rib 14' },
+    partNumber: 'A350-57-2201-901',
+    serialNumber: 'MSN-0418-SP',
+    severity: 'critical',
+    discrepancyText: 'During ultrasonic phased-array NDT post-fastener torque inspection at Wing Spar Rib-14, acoustic attenuation scan revealed a 18mm x 7mm inter-laminar delamination zone located between carbon-fiber plies 24 and 28. Discrepancy exceeds the allowable damage limit (ADL max 5mm) per SRM 57-10-02. Suspected localized clamping over-pressure during automated robotic drilling jig deployment.',
+    ncrStatus: 'engineering_review',
+    verificationStatus: 'pending',
+    confidenceScore: 52, // INTEGER 0-100, < 60 (qualifies for Supervisor Review Queue)
+    confidenceEvaluation: 'LOW',
+    fmeaScore: 92,
+    tags: ['CFRP', 'Wing Spar', 'Ultrasonic NDT', 'Structural Safety', 'Airbus A350'],
+    analysis: {
+      executiveSummary: 'Critical inter-laminar CFRP delamination identified on the A350 main wing spar exceeding allowable SRM damage thresholds by 13mm.',
+      rootCauseHypothesis: 'Robotic automated fastener drill jig clamping cylinder pressure transducer drift causing localized compression shear during titanium bushing insertion.',
+      fmeaScore: 92,
+      severityAssessment: 'CRITICAL - Direct primary flight load path. Flight grounding risk if untreated.',
+      containmentSteps: [
+        'Halt automated drilling on Line 3 Wing Box Assembly.',
+        'Quarantine affected Wing Spar Section MSN-0418.',
+        'Perform 100% Phased-Array scan across all 24 fastener locations on adjacent Rib-13 and Rib-15.'
+      ],
+      dispositionRecommendation: 'Submit Concession Request to Airbus Design Office (Toulouse). Perform stepped-scarf composite bonded repair with high-modulus carbon pre-preg autoclave patch per SRM 51-70-00.',
+      suggestedReflections: [
+        'Did the robotic drilling load cell log a pressure spike above 4.5 kN during cycle #142?',
+        'Verify moisture exposure telemetry of the spar prior to autoclave cure cycle.'
+      ]
+    }
   },
   {
-    id: "sample-bearing-race",
-    title: "CNC Spindle Bearing Raceway Spalling",
-    partName: "Angular Contact Ball Bearing Inner Raceway (Type 7014-C)",
-    subsystem: "High-Speed CNC Milling Spindle Drive",
-    category: "Precision Machining",
-    notes: "Acoustic emission sensor triggered at 18,000 RPM with spike in high-frequency velocity vibration (4.8 mm/s RMS). Surface metallurgical flaking observed on primary load ball track.",
-    image: bearingRacePng,
+    title: 'Stage 1 High Pressure Turbine Blade TBC Ceramic Spallation',
+    program: 'Rolls-Royce Trent XWB',
+    facility: 'Derby Test Bed 80 (Sinfin A)',
+    coordinates: '52.8833° N, 1.4833° W',
+    blueprintLocation: { x: 62, y: 32, zone: 'HP Turbine Stage 1 - Blade #19' },
+    partNumber: 'FW39281-R04',
+    serialNumber: 'XWB-97-TB80-8842',
+    severity: 'major',
+    discrepancyText: 'Borescope inspection of Trent XWB-97 engine after 150-hour endurance test cycling revealed 4.2mm² Thermal Barrier Coating (TBC) yttria-stabilized zirconia spallation on the suction side leading edge of Blade #19. Underlying single-crystal nickel superalloy substrate exhibits initial localized thermal oxidation coloration. Cooling film hole #4 shows 25% particulate slag constriction.',
+    ncrStatus: 'open',
+    verificationStatus: 'pending',
+    confidenceScore: 48, // INTEGER 0-100, < 60 (qualifies for Supervisor Review Queue)
+    confidenceEvaluation: 'LOW',
+    fmeaScore: 78,
+    tags: ['Turbine Blade', 'TBC Spallation', 'Propulsion', 'Derby Test Cell', 'Rolls-Royce'],
+    analysis: {
+      executiveSummary: 'High-temperature thermal barrier coating degradation on Trent XWB HP Turbine blade with cooling film aperture constriction.',
+      rootCauseHypothesis: 'Thermal cyclic shock combined with calcium-magnesium-alumino-silicate (CMAS) environmental deposit interaction causing coating spallation.',
+      fmeaScore: 78,
+      severityAssessment: 'MAJOR - Component subject to 1600°C combustor exit gas stream. Substrate thermal fatigue propagation risk.',
+      containmentSteps: [
+        'Isolate Stage 1 Turbine Rotor set for metallographic CT evaluation.',
+        'Check fuel nozzle spray patterns on combustor sectors 3 and 4 for hot-spot streak anomalies.',
+        'Inspect cooling airflow differential pressure logs across all 68 rotor blades.'
+      ],
+      dispositionRecommendation: 'Remove and replace Blade #19 with fresh EB-PVD coated single-crystal spare. Send spalled blade to Materials Failure Lab for SEM/EDS micro-structural analysis.',
+      suggestedReflections: [
+        'What was the combustor exit temperature profile variance during maximum thrust transient testing?',
+        'Are adjacent blade cooling holes showing similar micro-particulate buildup?'
+      ]
+    }
   },
   {
-    id: "sample-pump-impeller",
-    title: "Centrifugal Slurry Impeller Cavitation Pitting",
-    partName: "Ni-Hard 4 Alloy Centrifugal Slurry Pump Closed Impeller",
-    subsystem: "Primary Cyclone Feed Circulation Circuit",
-    category: "Hydraulics & Mining",
-    notes: "Suction head dropped 14% over past 400 operating hours with noticeable surging noise (popping marbles sound). Vane trailing edge exhibits classic sponge-like erosion pocketing.",
-    image: pumpCavitationPng,
+    title: 'Fly-by-Wire Rudder Dual-Channel Hydraulic Actuator Differential Delta',
+    program: 'Bombardier Global 7500',
+    facility: 'Montreal Mirabel Manufacturing Center',
+    coordinates: '45.6811° N, 74.0389° W',
+    blueprintLocation: { x: 88, y: 18, zone: 'Empennage Rudder Servo-Actuator Bay' },
+    partNumber: 'B7500-27-4100-3',
+    serialNumber: 'BD-7500-FCS-019',
+    severity: 'major',
+    discrepancyText: 'Pre-flight avionics integration loop test indicated a 380 PSI differential pressure split between Hydraulic Circuit 1 (Blue) and Circuit 3 (Green) during dynamic 40 deg/sec rudder sweep cycles. Secondary electro-hydraulic servo valve (EHSV) spool displacement lag measured at 42 milliseconds, triggering amber CAS caution message [FCS RUD PRESS ASYM].',
+    ncrStatus: 'open',
+    verificationStatus: 'approved',
+    confidenceScore: 89, // INTEGER 0-100, HIGH
+    confidenceEvaluation: 'HIGH',
+    fmeaScore: 74,
+    tags: ['Fly-by-Wire', 'Hydraulics', 'Avionics', 'Mirabel Plant', 'Bombardier'],
+    analysis: {
+      executiveSummary: 'Hydraulic pressure split and EHSV spool response latency identified in Global 7500 dual-redundant rudder flight control system.',
+      rootCauseHypothesis: 'Micro-contamination in EHSV pilot stage flapper orifice or internal spool seal micro-extrusion under 3000 PSI operating pressures.',
+      fmeaScore: 74,
+      severityAssessment: 'MAJOR - Redundant flight control surface integrity requirement. Must resolve prior to customer flight acceptance.',
+      containmentSteps: [
+        'Quarantine Actuator S/N BD-7500-FCS-019 and flush hydraulic test rig manifold.',
+        'Perform fluid particulate count per NAS 1638 Class 5 standard on Circuit 1 and 3 reservoir samples.',
+        'Perform zero-null calibration verification on FCC (Flight Control Computer) channel B.'
+      ],
+      dispositionRecommendation: 'Bench-test and replace EHSV manifold sub-assembly. Retest with automated 500-cycle frequency response sweep script.',
+      suggestedReflections: [
+        'Did hydraulic fluid sampling confirm compliance with Skydrol 500B-4 particulate purity specs?',
+        'Is there any recorded firmware revision mismatch between FCC Channel A and B?'
+      ]
+    }
   },
+  {
+    title: 'Titanium Fan Blade Leading Edge FOD Micro-Pitting & Indentation',
+    program: 'Airbus A320neo',
+    facility: 'Hamburg Finkenwerder Delivery Center',
+    coordinates: '53.5358° N, 9.8358° E',
+    blueprintLocation: { x: 22, y: 65, zone: 'Engine #1 Nacelle / Titanium Fan Rotor' },
+    partNumber: 'LEAP-1A-72-1002',
+    serialNumber: 'CFM-NEO-FBL-077',
+    severity: 'minor',
+    discrepancyText: 'Post-flight-line taxi run walkaround inspection detected a 0.8mm depth sharp indentation on Fan Blade #11 leading edge at 70% blade height radius. Notch radius is 0.15mm with minor localized burr. Blending allowable limit per CFM Engine Maintenance Manual is max 1.2mm depth with 4:1 blend ratio.',
+    ncrStatus: 'draft',
+    verificationStatus: 'pending',
+    confidenceScore: 58, // INTEGER 0-100, < 60 (qualifies for Supervisor Review Queue)
+    confidenceEvaluation: 'MODERATE',
+    fmeaScore: 42,
+    tags: ['Fan Blade', 'FOD', 'CFM LEAP-1A', 'Hamburg', 'Airbus'],
+    analysis: {
+      executiveSummary: 'Minor foreign object debris (FOD) leading edge nick on titanium fan blade within allowable SRM blend limits.',
+      rootCauseHypothesis: 'Runway/taxiway gravel particulate ingestion during reverse thrust ground validation run.',
+      fmeaScore: 42,
+      severityAssessment: 'MINOR - Within SRM Blend limits. No structural crack propagation identified under dye penetrant check.',
+      containmentSteps: [
+        'Inspect runway 23 taxiway sweep logs at Finkenwerder.',
+        'Perform Fluorescent Penetrant Inspection (FPI) around notch root to ensure zero micro-fissures.'
+      ],
+      dispositionRecommendation: 'Perform precision manual rotary stone blending with 4:1 taper ratio per EMM 72-21-00. Re-verify dynamic fan balance.',
+      suggestedReflections: [
+        'Is the post-blend residual thickness well within aerodynamic flutter margin criteria?'
+      ]
+    }
+  }
 ];

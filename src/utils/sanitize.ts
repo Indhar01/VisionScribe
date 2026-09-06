@@ -1,25 +1,29 @@
 /**
- * Recursively removes undefined values from objects/arrays prior to Firestore operations
- * to satisfy strict payload integrity rules.
+ * Strict Undefined-Stripping & Payload Hygiene
+ * Guarantees zero crashes from undefined Firestore properties
  */
-export function sanitizePayload<T>(obj: T): T {
-  if (obj === null || obj === undefined) {
+export function sanitizeFirestorePayload<T extends Record<string, any>>(obj: T): T {
+  if (obj === null || typeof obj !== 'object') {
     return obj;
   }
 
   if (Array.isArray(obj)) {
-    return obj.map((item) => sanitizePayload(item)) as unknown as T;
+    return obj
+      .filter((item) => item !== undefined)
+      .map((item) => (typeof item === 'object' && item !== null ? sanitizeFirestorePayload(item) : item)) as unknown as T;
   }
 
-  if (typeof obj === "object" && !(obj instanceof Date)) {
-    const cleaned: Record<string, any> = {};
-    for (const [key, value] of Object.entries(obj)) {
-      if (value !== undefined) {
-        cleaned[key] = sanitizePayload(value);
-      }
+  const cleaned: Record<string, any> = {};
+  for (const [key, value] of Object.entries(obj)) {
+    if (value === undefined) {
+      continue;
     }
-    return cleaned as T;
+    if (value !== null && typeof value === 'object') {
+      cleaned[key] = sanitizeFirestorePayload(value);
+    } else {
+      cleaned[key] = value;
+    }
   }
 
-  return obj;
+  return cleaned as T;
 }
