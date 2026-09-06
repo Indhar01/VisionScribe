@@ -19,13 +19,15 @@ Aerospace inspectors spend 30–60 minutes writing up a *single* defect — cros
 
 Built for the **Google Cloud Run AI Ideathon Challenge** (`#AccelerateAIwithCloudRun`).
 
+**🔗 Live app: [visionscribe-aerospace-ai-inspection-ncr-journal-59981190871.asia-southeast1.run.app](https://visionscribe-aerospace-ai-inspection-ncr-journal-59981190871.asia-southeast1.run.app/)**
+
 ---
 
 ## 🎥 Demo
 
 [![Watch the VisionScribe demo](docs/screenshots/demo-thumbnail.png)](https://lnkd.in/g2EFTbT6)
 
-*Click the thumbnail to watch the full walkthrough — upload → AI reflection → copilot chat → NCR export.*
+*Click the thumbnail to watch the full walkthrough — upload & blueprint pinning → AI reflection → 8D NCR → copilot chat → Supervisor Review Queue → audit export.*
 
 ---
 
@@ -33,8 +35,9 @@ Built for the **Google Cloud Run AI Ideathon Challenge** (`#AccelerateAIwithClou
 
 | | |
 |---|---|
-| **Secure sign-in, zero passwords** ![Sign in](docs/screenshots/01-landing-signin.png) | **Upload a defect + field notes** ![Upload](docs/screenshots/02-defect-upload.png) |
-| **Gemini AI reflection: FMEA, root cause, MRB disposition** ![AI Reflection](docs/screenshots/03-ai-reflection-ncr.png) | **Multi-turn engineering copilot chat** ![Copilot](docs/screenshots/04-copilot-chat.png) |
+| **Secure sign-in, zero passwords** ![Sign in](docs/screenshots/01-landing-signin.png) | **Upload a defect + pin it on the blueprint** ![Upload](docs/screenshots/02-defect-upload.png) |
+| **Gemini AI reflection: FMEA, root cause, MRB disposition** ![AI Reflection](docs/screenshots/03-ai-reflection-ncr.png) | **Automated 8D NCR — all eight disciplines, MRB sign-off** ![8D NCR](docs/screenshots/06-8d-ncr-report.png) |
+| **Multi-turn engineering copilot chat** ![Copilot](docs/screenshots/04-copilot-chat.png) | **Role-based Supervisor Review Queue — cross-user triage** ![Supervisor Queue](docs/screenshots/07-supervisor-queue.png) |
 
 **Full inspection journal — searchable, filterable, audit-ready:**
 ![Inspection Journal](docs/screenshots/05-inspection-journal.png)
@@ -121,7 +124,7 @@ npm run start   # serve the built app
 
 ## 🧪 Try It Yourself
 
-1. Open the live app and sign in with Google — or pick one of the **Fast-Track** presets (Airbus A350, Rolls-Royce Trent XWB, Bombardier Global 7500) to load a pre-filled test scenario.
+1. Open the [live app](https://visionscribe-aerospace-ai-inspection-ncr-journal-59981190871.asia-southeast1.run.app/) and sign in with Google — or pick one of the **Fast-Track** presets (Airbus A350, Rolls-Royce Trent XWB, Bombardier Global 7500) to load a pre-filled test scenario.
 2. Pin a defect coordinate on the interactive airframe blueprint, or use a quick preset.
 3. Hit **Generate Gemini AS9100 Reflection** and watch the FMEA score, root cause hypothesis, and MRB disposition appear in seconds.
 4. Open **Gemini Copilot Chat** and ask a follow-up question — it keeps full context of the inspection.
