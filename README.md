@@ -162,6 +162,27 @@ VisionScribe is optimized for containerized deployment on Google Cloud Run.
 
 ### Deploy Command
 
+**Step 1 — Create the secret in Secret Manager** (one-time setup):
+
+```bash
+echo -n "your_api_key" | gcloud secrets create GEMINI_API_KEY \
+  --data-file=- \
+  --replication-policy=automatic
+
+# For subsequent key rotations, add a new version instead of re-creating:
+echo -n "your_new_api_key" | gcloud secrets versions add GEMINI_API_KEY --data-file=-
+```
+
+**Step 2 — Grant the Cloud Run service account access to the secret**:
+
+```bash
+gcloud secrets add-iam-policy-binding GEMINI_API_KEY \
+  --member="serviceAccount:PROJECT_NUMBER-compute@developer.gserviceaccount.com" \
+  --role="roles/secretmanager.secretAccessor"
+```
+
+**Step 3 — Deploy, injecting the secret at runtime**:
+
 ```bash
 gcloud run deploy visionscribe \
   --source . \
@@ -169,11 +190,13 @@ gcloud run deploy visionscribe \
   --region asia-southeast1 \
   --allow-unauthenticated \
   --port 3000 \
-  --set-env-vars GEMINI_API_KEY="your_api_key" \
+  --set-secrets GEMINI_API_KEY=GEMINI_API_KEY:latest \
   --update-labels=dev-tutorial=cloud-run-ai-challenge
 ```
 
 > **Important**: The `--update-labels=dev-tutorial=cloud-run-ai-challenge` flag is required for deployment verification under the Cloud Run AI Challenge standard.
+
+> ⚠️ **Security Note**: Never deploy with `--set-env-vars GEMINI_API_KEY="your_api_key"`. Passing a literal secret value through `--set-env-vars` hardcodes the credential directly into the Cloud Run revision's metadata and configuration history — it becomes readable to anyone with `run.services.get` access (e.g., via `gcloud run services describe` or the Console), persists across revisions, and can leak into logs or IaC exports. Using `--set-secrets` instead mounts the value from Secret Manager at container start, keeping the raw key out of revision metadata and enabling centralized rotation and access auditing.
 
 ---
 
