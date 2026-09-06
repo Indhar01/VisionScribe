@@ -1,19 +1,59 @@
-# VisionScribe: AS9100 Aerospace Inspection & Discrepancy Journal
+# VisionScribe
 
-> **Enterprise AI Quality Management for Airbus, Rolls-Royce, and Bombardier**  
-> Built for the **Google Cloud Run AI Challenge** (`#AccelerateAIwithCloudRun`).
+**AI-powered aerospace inspection & AS9100 compliance journal — from defect photo to audit-ready report in seconds.**
 
----
-
-## ✈️ Executive Overview
-
-**VisionScribe** is an enterprise-grade, user-authenticated inspection journaling and Non-Conformance Report (NCR) platform engineered for flight quality engineers and NDT inspectors across commercial aerospace manufacturing lines (Airbus A350, Rolls-Royce Trent XWB, Bombardier Global 7500).
-
-Inspectors write multi-turn observation logs, pin coordinates on interactive airframe schematics, and converse with **Gemini 3.6 Flash** for instant root cause FMEA analysis, 8D containment protocols, and Material Review Board (MRB) dispositions. All data is cryptographically audited and isolated strictly to authenticated users in **Cloud Firestore**.
+![React](https://img.shields.io/badge/React-18-61DAFB?logo=react&logoColor=black)
+![TypeScript](https://img.shields.io/badge/TypeScript-Vite-3178C6?logo=typescript&logoColor=white)
+![Gemini](https://img.shields.io/badge/Gemini-3.6%20Flash-8E75FF?logo=googlegemini&logoColor=white)
+![Firebase](https://img.shields.io/badge/Firebase-Auth%20%2B%20Firestore-FFCA28?logo=firebase&logoColor=black)
+![Cloud Run](https://img.shields.io/badge/Google%20Cloud%20Run-Serverless-4285F4?logo=googlecloud&logoColor=white)
+![Challenge](https://img.shields.io/badge/%23AccelerateAIwithCloudRun-Ideathon%20APAC-34A853)
 
 ---
 
-## 🏛️ System Architecture & Tech Stack
+## Why this exists
+
+Aerospace inspectors spend 30–60 minutes writing up a *single* defect — cross-referencing manuals, scoring severity, drafting the compliance paperwork by hand. That time comes straight out of aircraft-on-ground hours, and it's repetitive enough that tired engineers on a long shift make mistakes.
+
+**VisionScribe** turns a defect photo and a short field note into a fully structured, AS9100 Rev D-compliant Non-Conformance Report in under 15 seconds — root cause hypothesis, FMEA severity score, 8D discipline breakdown, and MRB disposition included. It's built for the flight quality engineers, NDT inspectors, and MRO operations teams who live in that paperwork every day, at manufacturers like Airbus, Rolls-Royce, and Bombardier.
+
+Built for the **Google Cloud Run AI Ideathon Challenge** (`#AccelerateAIwithCloudRun`).
+
+---
+
+## 🎥 Demo
+
+[![Watch the VisionScribe demo](docs/screenshots/demo-thumbnail.png)](https://lnkd.in/g2EFTbT6)
+
+*Click the thumbnail to watch the full walkthrough — upload → AI reflection → copilot chat → NCR export.*
+
+---
+
+## 📸 Screenshots
+
+| | |
+|---|---|
+| **Secure sign-in, zero passwords** ![Sign in](docs/screenshots/01-landing-signin.png) | **Upload a defect + field notes** ![Upload](docs/screenshots/02-defect-upload.png) |
+| **Gemini AI reflection: FMEA, root cause, MRB disposition** ![AI Reflection](docs/screenshots/03-ai-reflection-ncr.png) | **Multi-turn engineering copilot chat** ![Copilot](docs/screenshots/04-copilot-chat.png) |
+
+**Full inspection journal — searchable, filterable, audit-ready:**
+![Inspection Journal](docs/screenshots/05-inspection-journal.png)
+
+---
+
+## ✨ Key Features
+
+- 🔹 **Gemini-powered reasoning** — instant FMEA root-cause analysis, risk scoring, and multi-turn engineering copilot conversations directly from raw inspection text
+- 🔹 **Interactive SVG blueprint pinning** — inspectors click directly on airframe schematics to pin defect coordinates
+- 🔹 **Automated 8D NCR generation** — Gemini synthesizes all eight disciplines into Material Review Board-ready disposition documents
+- 🔹 **Role-based Supervisor Review Queue** — cross-user triage of low-confidence AI findings for human sign-off, mirroring real MRB workflows
+- 🔹 **Zero-trust data isolation** — Firebase Auth + Cloud Firestore security rules enforce strict per-user data boundaries
+- 🔹 **Serverless & secretless** — the full stack runs as one containerized Cloud Run service, pulling credentials from Secret Manager via IAM — no hardcoded secrets, anywhere
+- 🔹 **Cryptographic audit trail** — every create, update, and sign-off is logged with a tamper-evident SHA-256 checksum, exportable as an AS9100 regulatory package
+
+---
+
+## 🏛️ Architecture
 
 ```
  ┌────────────────────────────────────────────────────────────┐
@@ -48,149 +88,51 @@ Inspectors write multi-turn observation logs, pin coordinates on interactive air
 | **Frontend Runtime** | React 18 + TypeScript + Vite | Interactive HUD interface with Tailwind CSS styling |
 | **User Identity** | Firebase Authentication | Federated Google Identity (zero password storage) |
 | **Database Persistence** | Cloud Firestore | Owner-bound user data isolation (`/users/{uid}/*`) |
-| **AI Reasoning Engine**| Gemini 3.6 Flash | Multi-turn FMEA risk scoring, 8D containment, and NCRs |
+| **AI Reasoning Engine** | Gemini 3.6 Flash | Multi-turn FMEA risk scoring, 8D containment, and NCRs |
 | **Backend & Ingress** | Express + Node.js on Cloud Run | API proxy, payload hygiene, model fallback ladder |
 | **Secret Management** | Google Cloud Secret Manager | Dynamic injection of `GEMINI_API_KEY` |
 
 ---
 
-## 🔒 1. Firestore Security Rules
-
-Deploy these rules to ensure absolute data isolation between aerospace inspectors:
-
-```javascript
-rules_version = '2';
-service cloud.firestore {
-  match /databases/{database}/documents {
-    
-    // Authenticated user helper
-    function isAuthenticated() {
-      return request.auth != null;
-    }
-    
-    // Strict Owner-Bound Data Isolation
-    function isOwner(userId) {
-      return isAuthenticated() && request.auth.uid == userId;
-    }
-
-    // Isolated Inspections Subcollection
-    match /users/{userId}/inspections/{inspectionId} {
-      allow read, write: if isOwner(userId);
-    }
-
-    // Multi-Turn Chat Interactions
-    match /users/{userId}/interactions/{interactionId} {
-      allow read, write: if isOwner(userId);
-    }
-
-    // Cryptographic Compliance & Audit Logs
-    match /users/{userId}/auditLogs/{auditId} {
-      allow read, write: if isOwner(userId);
-    }
-    
-    // Default Deny
-    match /{document=**} {
-      allow read, write: if false;
-    }
-  }
-}
-```
-
----
-
-## 🔑 2. Secret Manager Configuration
-
-Store the Gemini API credentials dynamically without hardcoding:
+## 🚀 Quick Start (local development)
 
 ```bash
-# 1. Enable required Google Cloud APIs
-gcloud services enable run.googleapis.com secretmanager.googleapis.com firestore.googleapis.com
+# 1. Clone and install
+git clone <this-repo-url>
+cd VisionScribe
+npm install
 
-# 2. Create and populate the secret
-gcloud secrets create GEMINI_API_KEY --replication-policy="automatic"
-echo -n "YOUR_GEMINI_API_KEY_HERE" | gcloud secrets versions add GEMINI_API_KEY --data-file=-
+# 2. Configure environment
+cp .env.example .env
+# Fill in GEMINI_API_KEY and your Firebase project config in .env
 
-# 3. Grant Cloud Run Service Account read permissions
-PROJECT_NUMBER=$(gcloud projects describe $(gcloud config get-value project) --format="value(projectNumber)")
-
-gcloud secrets add-iam-policy-binding GEMINI_API_KEY \
-  --member="serviceAccount:${PROJECT_NUMBER}-compute@developer.gserviceaccount.com" \
-  --role="roles/secretmanager.secretAccessor"
+# 3. Run the dev server
+npm run dev
 ```
 
----
-
-## 🚀 3. Cloud Run Deployment Flow
-
-Build and deploy the full-stack container to Google Cloud Run:
+The app runs on Vite's dev server with the Express API proxy (`server.ts`) alongside it. For a production container build:
 
 ```bash
-# Build and deploy container directly to Cloud Run
-gcloud run deploy visionscribe \
-  --source . \
-  --region us-central1 \
-  --allow-unauthenticated \
-  --set-secrets=GEMINI_API_KEY=GEMINI_API_KEY:latest \
-  --port 3000
+npm run build   # vite build + bundle server.ts
+npm run start   # serve the built app
 ```
 
 ---
 
-## 🏷️ 4. Campaign Verification Label (Required)
+## 🧪 Try It Yourself
 
-Apply the mandatory challenge label to register your deployment for verification:
+1. Open the live app and sign in with Google — or pick one of the **Fast-Track** presets (Airbus A350, Rolls-Royce Trent XWB, Bombardier Global 7500) to load a pre-filled test scenario.
+2. Pin a defect coordinate on the interactive airframe blueprint, or use a quick preset.
+3. Hit **Generate Gemini AS9100 Reflection** and watch the FMEA score, root cause hypothesis, and MRB disposition appear in seconds.
+4. Open **Gemini Copilot Chat** and ask a follow-up question — it keeps full context of the inspection.
+5. Generate an **8D NCR**, sign it off, and export the audit-ready package.
 
-```bash
-gcloud run services update visionscribe \
-  --update-labels=dev-tutorial=cloud-run-ai-challenge \
-  --region=us-central1
-```
-
----
-
-## 🧪 5. End-to-End Walkthrough & Test Guide
-
-### Scenario 1: Authentication & User Data Isolation
-1. Launch the web app and land on the **Aerospace Inspector Sign In** screen.
-2. Sign in using **Google Identity** or select **Fast-Track AS9100 Quality Lead (Airbus A350)**.
-3. Verify that the private dashboard renders exclusively records associated with your authenticated UID.
-
-### Scenario 2: Multi-Turn Inspection Entry & AI Reflection
-1. Under **New Inspection Log**, choose **Airbus A350** or **Rolls-Royce Trent XWB**.
-2. Click on the interactive SVG airframe schematic to pin coordinate hotspots (e.g., `(38%, 44%) - Port Wing Center Spar`).
-3. Enter discrepancy observations or click the quick preset **A350** / **Trent XWB**.
-4. Click **Generate Gemini 3.6 AS9100 Reflection**.
-5. Observe the instant FMEA RPN score, Root Cause hypothesis (8D D4), and Material Review Board disposition.
-6. Click **Save Inspection Entry** to commit the record to Cloud Firestore with celebratory feedback.
-
-### Scenario 3: Multi-Turn Engineering Dialogue
-1. Navigate to the **Gemini Copilot Chat** tab.
-2. Ask questions such as *"Draft an engineering concession proposal for Material Review Board (MRB) approval."*
-3. Verify multi-turn conversational memory persisted to `/users/{userId}/interactions/*`.
-
-### Scenario 4: 8D Non-Conformance Report (NCR) & MRB Sign-off
-1. Navigate to **8D NCR Reports**.
-2. Click **Generate 8D NCR via Gemini 3.6 Flash** to synthesize D1 through D8 disciplines.
-3. Click **Execute MRB Sign-Off** to authorize the report with formal timestamp and auditor credentials.
-4. Click **Print / PDF** to generate an official printable compliance document.
-
-### Scenario 5: Cryptographic Audit Trail Verification
-1. Open the **Audit & Compliance** tab.
-2. Verify tamper-evident SHA-256 event checksums for every create, update, and sign-off action.
-3. Click **Export Audit Log (JSON)** to download the AS9100 regulatory package.
+For the full step-by-step test guide (all 5 scenarios) and deployment/security configuration, see **[docs/DEPLOYMENT.md](docs/DEPLOYMENT.md)**.
 
 ---
 
-## 📢 6. Social Media & Hackathon Submission Copy
+## 🔒 Security & Deployment
 
-> **Post on LinkedIn / X (#AccelerateAIwithCloudRun #GoogleCloud #GeminiAI):**
->
-> 🚀 Excited to unveil **VisionScribe**, an AI-powered aerospace inspection and discrepancy intelligence platform built for the **Google Cloud Run AI Challenge**! ✈️
->
-> Engineered for manufacturing quality leads at Airbus, Rolls-Royce, and Bombardier, VisionScribe integrates:
-> 🔹 **Gemini 3.6 Flash** for real-time FMEA risk scoring, root cause analysis, and AS9100 8D NCR generation
-> 🔹 **Cloud Firestore** for owner-bound, zero-trust user data isolation
-> 🔹 **Google Cloud Run & Secret Manager** for serverless container deployment and zero-hardcoded secret security
-> 🔹 **Interactive SVG Blueprint Pinning** & cryptographic SHA-256 audit trails
->
-> Check out the live demo and architecture on Google Cloud Run! #AccelerateAIwithCloudRun #GoogleAIStudio #AerospaceQuality #CloudRun
+VisionScribe deploys as a single containerized service on Google Cloud Run, with Gemini credentials injected at runtime from Secret Manager (no hardcoded secrets anywhere) and per-user data isolation enforced by Firestore security rules — not just application-layer convention.
+
+Full Firestore rules, Secret Manager setup, Cloud Run deploy commands, and the campaign verification label step are documented in **[docs/DEPLOYMENT.md](docs/DEPLOYMENT.md)**.
