@@ -1,6 +1,6 @@
 import React from "react";
 import { InspectionRecord } from "../types/inspection";
-import { History, ChevronRight } from "lucide-react";
+import { ChevronRight } from "lucide-react";
 
 interface RecentLogsRibbonProps {
   inspections: InspectionRecord[];
@@ -16,8 +16,8 @@ export const RecentLogsRibbon: React.FC<RecentLogsRibbonProps> = ({
   const getBadge = (severity: number = 1) => {
     if (severity <= 2) {
       return {
-        bg: "bg-emerald-600 text-white",
-        text: "OK",
+        bg: "bg-emerald-700 text-white",
+        text: "PASS",
       };
     }
     if (severity === 3) {
@@ -27,7 +27,7 @@ export const RecentLogsRibbon: React.FC<RecentLogsRibbonProps> = ({
       };
     }
     return {
-      bg: "bg-rose-600 text-white",
+      bg: "bg-[#1c1c1a] text-white",
       text: "FAIL",
     };
   };
@@ -35,19 +35,16 @@ export const RecentLogsRibbon: React.FC<RecentLogsRibbonProps> = ({
   const displayList = inspections.slice(0, 6);
 
   return (
-    <div className="h-20 bg-white border-t border-slate-200 px-4 sm:px-8 flex items-center space-x-4 sm:space-x-6 overflow-hidden flex-shrink-0 shadow-xs">
-      <div className="flex-shrink-0 flex items-center space-x-2">
-        <span className="text-xs font-bold text-slate-400 uppercase tracking-widest hidden sm:inline">
-          Recent Logs
-        </span>
-        <span className="text-xs font-bold text-slate-400 uppercase tracking-widest sm:hidden">
-          Logs
+    <div className="bg-white border-t border-[#1c1c1a]/10 px-4 sm:px-8 py-3 flex items-center space-x-4 sm:space-x-6 overflow-hidden flex-shrink-0">
+      <div className="flex-shrink-0">
+        <span className="label-mono block">
+          Recent Records
         </span>
       </div>
 
       <div className="flex-1 flex items-center space-x-3 overflow-x-auto py-1 no-scrollbar">
         {displayList.length === 0 ? (
-          <div className="text-xs text-slate-400 italic">
+          <div className="text-xs text-[#1c1c1a]/50 italic">
             No inspection logs saved yet. Submit optical telemetry above to begin tracking.
           </div>
         ) : (
@@ -62,41 +59,30 @@ export const RecentLogsRibbon: React.FC<RecentLogsRibbonProps> = ({
                 key={record.id}
                 type="button"
                 onClick={() => onSelectInspection(record)}
-                className={`flex-shrink-0 w-52 sm:w-56 ${
-                  isDispatched
-                    ? "bg-blue-50/60 hover:bg-blue-100/60 border-blue-300"
-                    : "bg-slate-50 hover:bg-slate-100 border-slate-200"
-                } border rounded-md p-2 flex items-center space-x-2.5 transition cursor-pointer text-left relative ${
-                  idx > 2 ? "opacity-85 hover:opacity-100" : ""
+                className={`flex-shrink-0 w-52 sm:w-60 bg-white hover:bg-[#fafafa] border ${
+                  isDispatched ? "border-[#2563eb]/40" : "border-[#1c1c1a]/15"
+                } rounded-xs p-2.5 flex items-center space-x-2.5 transition cursor-pointer text-left relative ${
+                  idx > 3 ? "opacity-80 hover:opacity-100" : ""
                 }`}
               >
                 <div
-                  className={`w-7 h-7 rounded text-white flex items-center justify-center text-[9px] font-black flex-shrink-0 ${badge.bg}`}
+                  className={`px-1.5 py-1 font-mono-code text-[9px] font-bold rounded-none flex items-center justify-center flex-shrink-0 ${badge.bg}`}
                 >
                   {badge.text}
                 </div>
                 <div className="min-w-0 flex-1">
                   <div className="flex items-center justify-between gap-1">
-                    <p className="text-[11px] font-bold text-slate-800 truncate uppercase">
+                    <p className="text-xs font-semibold text-[#1c1c1a] truncate">
                       {record.machineryPart}
                     </p>
-                    {isDispatched && (
-                      <span className="flex-shrink-0 text-[8px] font-extrabold px-1.5 py-0.2 rounded bg-blue-100 text-blue-800 border border-blue-300 uppercase tracking-tight">
-                        Dispatched
-                      </span>
-                    )}
                   </div>
-                  <div className="text-[9px] text-slate-500 truncate flex items-center justify-between mt-0.5">
+                  <div className="font-mono-code text-[10px] text-[#1c1c1a]/60 truncate flex items-center justify-between mt-0.5">
                     <span>
-                      {new Date(record.createdAt).toLocaleDateString([], {
-                        month: "short",
-                        day: "numeric",
-                      })}{" "}
-                      • Sev {sev}/5
+                      {trackingId ? trackingId : `SEV ${sev}/5`}
                     </span>
-                    {trackingId && (
-                      <span className="font-mono text-[9px] font-bold text-blue-700 bg-white px-1 rounded border border-blue-200">
-                        {trackingId}
+                    {isDispatched && (
+                      <span className="text-[#2563eb] font-semibold">
+                        Dispatched
                       </span>
                     )}
                   </div>
@@ -110,12 +96,13 @@ export const RecentLogsRibbon: React.FC<RecentLogsRibbonProps> = ({
       {inspections.length > 0 && (
         <button
           onClick={onViewAllHistory}
-          className="flex-shrink-0 text-xs font-semibold text-blue-600 hover:text-blue-800 flex items-center gap-1 cursor-pointer"
+          className="flex-shrink-0 font-mono-code text-[11px] text-[#2563eb] hover:underline flex items-center gap-1 cursor-pointer whitespace-nowrap"
         >
-          <span className="hidden sm:inline">View All</span>
-          <ChevronRight className="w-4 h-4" />
+          <span>View Ledger</span>
+          <ChevronRight className="w-3.5 h-3.5" />
         </button>
       )}
     </div>
   );
 };
+

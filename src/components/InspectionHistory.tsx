@@ -3,14 +3,9 @@ import { InspectionRecord, DispositionType } from "../types/inspection";
 import {
   Search,
   Filter,
-  Calendar,
-  Layers,
   ArrowUpRight,
   Trash2,
-  AlertOctagon,
   FileCheck2,
-  CheckCircle2,
-  Clock,
   Plus,
   Ban,
   ShieldAlert,
@@ -48,31 +43,31 @@ export const InspectionHistory: React.FC<InspectionHistoryProps> = ({
   const getSeverityBadge = (score: number) => {
     switch (score) {
       case 1:
-        return "bg-emerald-50 text-emerald-700 border-emerald-200";
+        return "bg-emerald-50 text-emerald-800 border-emerald-200";
       case 2:
-        return "bg-amber-50 text-amber-700 border-amber-200";
+        return "bg-amber-50 text-amber-800 border-amber-200";
       case 3:
-        return "bg-orange-50 text-orange-700 border-orange-200";
+        return "bg-orange-50 text-orange-800 border-orange-200";
       case 4:
-        return "bg-red-50 text-red-700 border-red-200";
+        return "bg-rose-50 text-rose-800 border-rose-200";
       case 5:
       default:
-        return "bg-rose-50 text-rose-700 border-rose-200";
+        return "bg-[#1c1c1a] text-white border-[#1c1c1a]";
     }
   };
 
   const getDispositionBadge = (disp: DispositionType) => {
     switch (disp) {
       case "Scrap":
-        return "bg-red-50 text-red-700 border-red-200";
+        return "bg-red-50 text-red-800 border-red-200";
       case "Rework":
-        return "bg-amber-50 text-amber-700 border-amber-200";
+        return "bg-amber-50 text-amber-800 border-amber-200";
       case "Repair":
-        return "bg-blue-50 text-blue-700 border-blue-200";
+        return "bg-blue-50 text-blue-800 border-blue-200";
       case "Use-As-Is":
-        return "bg-emerald-50 text-emerald-700 border-emerald-200";
+        return "bg-emerald-50 text-emerald-800 border-emerald-200";
       default:
-        return "bg-slate-100 text-slate-700 border-slate-200";
+        return "bg-slate-100 text-slate-800 border-slate-200";
     }
   };
 
@@ -126,76 +121,96 @@ export const InspectionHistory: React.FC<InspectionHistoryProps> = ({
 
   return (
     <div className="space-y-6">
-      {/* Header & KPI Summary Cards */}
+      {/* Page Title */}
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-2 border-b border-[#1c1c1a]/10">
+        <div>
+          <span className="label-mono block mb-1">
+            Section 02 // Historical Records
+          </span>
+          <h2 className="font-serif-display text-2xl sm:text-3xl font-semibold italic text-[#1c1c1a]">
+            Inspection Journal Ledger
+          </h2>
+        </div>
+        <button
+          type="button"
+          onClick={onStartNewInspection}
+          className="px-4 py-2 bg-[#1c1c1a] hover:bg-[#1c1c1a]/90 text-white font-mono-code text-xs uppercase tracking-wider transition flex items-center justify-center gap-1.5 cursor-pointer self-start sm:self-auto"
+        >
+          <Plus className="w-3.5 h-3.5 text-[#2563eb]" />
+          <span>New Inspection</span>
+        </button>
+      </div>
+
+      {/* KPI Summary Cards */}
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
-        <div className="bg-white rounded-xl border border-slate-200 p-4 shadow-2xs">
-          <div className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">
+        <div className="bg-white border border-[#1c1c1a]/10 p-4">
+          <span className="label-mono block">
             Total Reports
-          </div>
-          <div className="text-2xl font-black text-slate-900 mt-1">
+          </span>
+          <div className="text-2xl font-mono-code font-bold text-[#1c1c1a] mt-1">
             {inspections.length}
           </div>
-          <div className="text-[11px] text-slate-500 mt-0.5">Isolated in Firestore</div>
+          <div className="font-mono-code text-[10px] text-[#1c1c1a]/50 mt-0.5">Isolated in Firestore</div>
         </div>
 
-        <div className="bg-white rounded-xl border border-slate-200 p-4 shadow-2xs">
-          <div className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">
+        <div className="bg-white border border-[#1c1c1a]/10 p-4">
+          <span className="label-mono block">
             Critical Alerts
-          </div>
-          <div className="text-2xl font-black text-red-600 mt-1">
+          </span>
+          <div className="text-2xl font-mono-code font-bold text-rose-700 mt-1">
             {inspections.filter((i) => (i.ncr?.severityScore || 0) >= 4).length}
           </div>
-          <div className="text-[11px] text-slate-500 mt-0.5">Severity 4 & 5</div>
+          <div className="font-mono-code text-[10px] text-[#1c1c1a]/50 mt-0.5">Severity 4 & 5</div>
         </div>
 
-        <div className="bg-white rounded-xl border border-slate-200 p-4 shadow-2xs">
-          <div className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">
+        <div className="bg-white border border-[#1c1c1a]/10 p-4">
+          <span className="label-mono block">
             Scrap / Rework
-          </div>
-          <div className="text-2xl font-black text-amber-600 mt-1">
+          </span>
+          <div className="text-2xl font-mono-code font-bold text-amber-700 mt-1">
             {
               inspections.filter(
                 (i) => i.ncr?.disposition === "Scrap" || i.ncr?.disposition === "Rework"
               ).length
             }
           </div>
-          <div className="text-[11px] text-slate-500 mt-0.5">Actionable Dispositions</div>
+          <div className="font-mono-code text-[10px] text-[#1c1c1a]/50 mt-0.5">Actionable Dispositions</div>
         </div>
 
-        <div className="bg-white rounded-xl border border-slate-200 p-4 shadow-2xs">
-          <div className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">
+        <div className="bg-white border border-[#1c1c1a]/10 p-4">
+          <span className="label-mono block">
             Avg Severity
-          </div>
-          <div className="text-2xl font-black text-blue-600 mt-1">
+          </span>
+          <div className="text-2xl font-mono-code font-bold text-[#2563eb] mt-1">
             {inspections.length > 0
               ? (
                   inspections.reduce((acc, i) => acc + (i.ncr?.severityScore || 1), 0) /
                   inspections.length
                 ).toFixed(1)
               : "0.0"}
-            <span className="text-xs font-normal text-slate-400"> / 5</span>
+            <span className="text-xs font-normal text-[#1c1c1a]/40"> / 5</span>
           </div>
-          <div className="text-[11px] text-slate-500 mt-0.5">Quality Health Metric</div>
+          <div className="font-mono-code text-[10px] text-[#1c1c1a]/50 mt-0.5">Quality Health Index</div>
         </div>
       </div>
 
       {/* Filter and Search Bar */}
-      <div className="bg-white rounded-xl border border-slate-200 p-4 shadow-2xs flex flex-col sm:flex-row gap-3 items-center justify-between">
+      <div className="bg-white border border-[#1c1c1a]/10 p-4 flex flex-col sm:flex-row gap-3 items-center justify-between">
         <div className="relative w-full sm:w-80">
-          <Search className="w-4 h-4 text-slate-400 absolute left-3 top-3 pointer-events-none" />
+          <Search className="w-4 h-4 text-[#1c1c1a]/40 absolute left-3 top-2.5 pointer-events-none" />
           <input
             type="text"
             id="input-search-history"
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
             placeholder="Search part, report #, or defect..."
-            className="w-full bg-slate-50/60 border border-slate-200 rounded-lg pl-9 pr-4 py-2 text-xs sm:text-sm text-slate-900 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:bg-white transition"
+            className="w-full bg-[#fafafa] border border-[#1c1c1a]/15 pl-9 pr-4 py-1.5 font-mono-code text-xs text-[#1c1c1a] placeholder-[#1c1c1a]/40 focus:outline-none focus:border-[#2563eb] transition"
           />
         </div>
 
         <div className="flex items-center gap-1.5 overflow-x-auto w-full sm:w-auto pb-1 sm:pb-0 no-scrollbar">
-          <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400 mr-1 flex items-center gap-1">
-            <Filter className="w-3 h-3 text-blue-600" />
+          <span className="label-mono mr-1 flex items-center gap-1">
+            <Filter className="w-3 h-3 text-[#2563eb]" />
             <span>Disposition:</span>
           </span>
           {["ALL", "Scrap", "Rework", "Repair", "Use-As-Is"].map((disp) => (
@@ -203,10 +218,10 @@ export const InspectionHistory: React.FC<InspectionHistoryProps> = ({
               key={disp}
               type="button"
               onClick={() => setFilterDisposition(disp)}
-              className={`text-xs px-2.5 py-1 rounded-md transition whitespace-nowrap cursor-pointer ${
+              className={`text-xs px-2.5 py-1 font-mono-code transition whitespace-nowrap cursor-pointer ${
                 filterDisposition === disp
-                  ? "bg-blue-600 text-white font-semibold shadow-2xs"
-                  : "bg-slate-100 text-slate-600 hover:bg-slate-200"
+                  ? "bg-[#1c1c1a] text-white font-semibold"
+                  : "bg-white border border-[#1c1c1a]/15 text-[#1c1c1a]/70 hover:bg-[#fafafa]"
               }`}
             >
               {disp}
@@ -217,23 +232,23 @@ export const InspectionHistory: React.FC<InspectionHistoryProps> = ({
 
       {/* History Grid */}
       {isLoading ? (
-        <div className="bg-white rounded-xl border border-slate-200 p-12 text-center shadow-2xs">
-          <div className="w-8 h-8 border-2 border-blue-600 border-t-transparent rounded-full animate-spin mx-auto mb-3" />
-          <p className="text-sm text-slate-600 font-medium">
+        <div className="bg-white border border-[#1c1c1a]/10 p-12 text-center">
+          <div className="w-8 h-8 border-2 border-[#2563eb] border-t-transparent rounded-full animate-spin mx-auto mb-3" />
+          <p className="font-mono-code text-xs text-[#1c1c1a]/70">
             Fetching isolated Firestore records...
           </p>
         </div>
       ) : filtered.length === 0 ? (
-        <div className="bg-white rounded-xl border border-slate-200 p-12 text-center shadow-2xs">
-          <div className="w-12 h-12 rounded-full bg-blue-50 border border-blue-200 flex items-center justify-center text-blue-600 mx-auto mb-3">
+        <div className="bg-white border border-[#1c1c1a]/10 p-12 text-center">
+          <div className="w-12 h-12 bg-[#fafafa] border border-[#1c1c1a]/15 flex items-center justify-center text-[#2563eb] mx-auto mb-3">
             <FileCheck2 className="w-6 h-6" />
           </div>
-          <h3 className="text-base font-bold text-slate-900">
+          <h3 className="font-serif-display text-xl font-semibold italic text-[#1c1c1a]">
             {inspections.length === 0
               ? "No Inspection Journal Entries Yet"
               : "No Reports Match Filter Criteria"}
           </h3>
-          <p className="text-xs text-slate-500 max-w-sm mx-auto mt-1 leading-relaxed">
+          <p className="text-xs text-[#1c1c1a]/60 max-w-sm mx-auto mt-1 leading-relaxed">
             {inspections.length === 0
               ? "Start an optical inspection session to generate and persist ISO 9001 non-conformance reports."
               : "Try adjusting your search keywords or clearing the disposition filter."}
@@ -242,9 +257,9 @@ export const InspectionHistory: React.FC<InspectionHistoryProps> = ({
             <button
               type="button"
               onClick={onStartNewInspection}
-              className="mt-4 px-4 py-2 rounded-lg bg-blue-600 hover:bg-blue-700 text-white font-semibold text-xs shadow-2xs transition inline-flex items-center gap-1.5 cursor-pointer"
+              className="mt-4 px-4 py-2 bg-[#1c1c1a] hover:bg-[#1c1c1a]/90 text-white font-mono-code text-xs uppercase tracking-wider transition inline-flex items-center gap-1.5 cursor-pointer"
             >
-              <Plus className="w-4 h-4" />
+              <Plus className="w-3.5 h-3.5 text-[#2563eb]" />
               <span>Launch First Inspection Session</span>
             </button>
           )}
@@ -261,35 +276,35 @@ export const InspectionHistory: React.FC<InspectionHistoryProps> = ({
               <div
                 key={record.id}
                 onClick={() => onSelectInspection(record)}
-                className={`bg-white border rounded-xl p-5 shadow-2xs transition flex flex-col justify-between cursor-pointer group relative overflow-hidden ${
+                className={`bg-white border p-5 transition flex flex-col justify-between cursor-pointer group relative overflow-hidden ${
                   isVoided
                     ? "border-rose-300 bg-rose-50/20 opacity-90"
-                    : "border-slate-200 hover:border-blue-400 hover:shadow-md"
+                    : "border-[#1c1c1a]/15 hover:border-[#1c1c1a] hover:shadow-xs"
                 }`}
               >
                 {/* Diagonal Void Watermark / Stamp if Voided */}
                 {isVoided && (
-                  <div className="absolute top-2 right-2 flex items-center gap-1 px-2 py-0.5 rounded bg-rose-100 border border-rose-300 text-rose-700 text-[9px] font-black uppercase tracking-wider z-10">
+                  <div className="absolute top-2 right-2 flex items-center gap-1 px-2 py-0.5 rounded bg-rose-100 border border-rose-300 text-rose-700 font-mono-code text-[9px] font-bold uppercase tracking-wider z-10">
                     <Ban className="w-3 h-3 text-rose-600" />
-                    <span>VOIDED (AUDIT)</span>
+                    <span>VOIDED</span>
                   </div>
                 )}
 
                 <div>
                   {/* Top Bar: Report # & Severity */}
                   <div className="flex items-center justify-between gap-2">
-                    <span className="text-[11px] font-semibold text-blue-700 font-mono bg-blue-50 border border-blue-200 px-2 py-0.5 rounded">
+                    <span className="font-mono-code text-[11px] font-semibold text-[#2563eb] bg-blue-50 border border-blue-200 px-2 py-0.5 rounded-xs">
                       {ncr?.reportNumber || "NCR-GEN"}
                     </span>
                     <div className="flex items-center gap-1.5">
                       {(record.status === "Dispatched" || record.workOrder) && (
-                        <span className="text-[9px] font-bold px-1.5 py-0.5 rounded border border-blue-300 bg-blue-50 text-blue-800 uppercase tracking-tight">
+                        <span className="font-mono-code text-[9px] font-bold px-1.5 py-0.5 border border-[#2563eb]/40 bg-blue-50 text-[#2563eb] uppercase tracking-tight">
                           {record.workOrder?.trackingId || "Dispatched"}
                         </span>
                       )}
                       {!isVoided && (
                         <span
-                          className={`text-[10px] font-bold px-2 py-0.5 rounded border uppercase tracking-wider ${getSeverityBadge(
+                          className={`font-mono-code text-[10px] font-bold px-2 py-0.5 border uppercase tracking-wider ${getSeverityBadge(
                             sevScore
                           )}`}
                         >
@@ -300,25 +315,25 @@ export const InspectionHistory: React.FC<InspectionHistoryProps> = ({
                   </div>
 
                   {/* Machinery Part */}
-                  <h3 className="text-base font-bold text-slate-900 mt-2.5 group-hover:text-blue-600 transition truncate">
+                  <h3 className="font-serif-display text-lg font-semibold italic text-[#1c1c1a] mt-2.5 group-hover:text-[#2563eb] transition truncate">
                     {record.machineryPart}
                   </h3>
-                  <p className="text-xs text-slate-500 mt-0.5 truncate">
+                  <p className="font-mono-code text-xs text-[#1c1c1a]/60 mt-0.5 truncate">
                     {record.subsystem}
                   </p>
 
                   {/* Defect Classification Pill & ATA Chapter / Confidence */}
                   <div className="mt-2.5 flex flex-wrap items-center gap-1.5">
-                    <span className="text-[11px] font-medium text-slate-700 bg-slate-100 px-2 py-0.5 rounded border border-slate-200 inline-block truncate max-w-full">
+                    <span className="font-mono-code text-[10px] font-medium text-[#1c1c1a] bg-[#fafafa] px-2 py-0.5 border border-[#1c1c1a]/15 inline-block truncate max-w-full">
                       {ncr?.defectClassification || "Surface Defect"}
                     </span>
                     {ncr?.ataChapter && (
-                      <span className="text-[10px] font-semibold text-slate-600 bg-slate-50 px-1.5 py-0.5 rounded border border-slate-200 font-mono">
+                      <span className="font-mono-code text-[10px] text-[#1c1c1a]/70 bg-[#fafafa] px-1.5 py-0.5 border border-[#1c1c1a]/15">
                         {ncr.ataChapter}
                       </span>
                     )}
                     {ncr?.confidenceScore && (
-                      <span className="text-[10px] font-bold text-emerald-700 bg-emerald-50 px-1.5 py-0.5 rounded border border-emerald-200">
+                      <span className="font-mono-code text-[10px] font-bold text-emerald-800 bg-emerald-50 px-1.5 py-0.5 border border-emerald-200">
                         {ncr.confidenceScore}% Conf
                       </span>
                     )}
@@ -326,14 +341,14 @@ export const InspectionHistory: React.FC<InspectionHistoryProps> = ({
 
                   {/* Defect preview image & summary snippet */}
                   <div className="mt-3 flex gap-3 items-center">
-                    <div className="w-14 h-14 rounded-lg bg-slate-50 border border-slate-200 flex-shrink-0 overflow-hidden flex items-center justify-center">
+                    <div className="w-14 h-14 bg-[#fafafa] border border-[#1c1c1a]/15 flex-shrink-0 overflow-hidden flex items-center justify-center">
                       <img
                         src={record.imageUrl}
                         alt={record.machineryPart}
                         className="w-full h-full object-cover"
                       />
                     </div>
-                    <p className="text-xs text-slate-600 line-clamp-2 leading-relaxed">
+                    <p className="text-xs text-[#1c1c1a]/70 line-clamp-2 leading-relaxed">
                       {isVoided && record.voidReason ? (
                         <span className="text-rose-700 font-medium italic">
                           [Void Reason]: {record.voidReason}
@@ -346,18 +361,18 @@ export const InspectionHistory: React.FC<InspectionHistoryProps> = ({
                 </div>
 
                 {/* Footer Bar */}
-                <div className="mt-4 pt-3 border-t border-slate-100 flex items-center justify-between text-xs text-slate-500">
+                <div className="mt-4 pt-3 border-t border-[#1c1c1a]/10 flex items-center justify-between text-xs text-[#1c1c1a]/60">
                   <div className="flex items-center gap-2">
                     {ncr?.disposition && (
                       <span
-                        className={`text-[9px] font-bold px-1.5 py-0.5 rounded border uppercase ${getDispositionBadge(
+                        className={`font-mono-code text-[9px] font-bold px-1.5 py-0.5 border uppercase ${getDispositionBadge(
                           ncr.disposition
                         )}`}
                       >
                         {ncr.disposition}
                       </span>
                     )}
-                    <span className="text-[10px] text-slate-400">
+                    <span className="font-mono-code text-[10px] text-[#1c1c1a]/50">
                       {new Date(record.createdAt).toLocaleDateString([], {
                         month: "short",
                         day: "numeric",
@@ -372,7 +387,7 @@ export const InspectionHistory: React.FC<InspectionHistoryProps> = ({
                         type="button"
                         title="Void record with formal AS9100 / ISO audit trail"
                         onClick={(e) => handleOpenVoidModal(e, record)}
-                        className="p-1.5 rounded text-slate-400 hover:text-rose-600 hover:bg-rose-50 transition cursor-pointer"
+                        className="p-1.5 text-[#1c1c1a]/40 hover:text-rose-600 transition cursor-pointer"
                       >
                         <Ban className="w-3.5 h-3.5" />
                       </button>
@@ -384,7 +399,7 @@ export const InspectionHistory: React.FC<InspectionHistoryProps> = ({
                       title="Permanently Delete Record"
                       onClick={(e) => handleDelete(e, record.id)}
                       disabled={isDeleting}
-                      className="p-1.5 rounded text-slate-400 hover:text-red-600 hover:bg-red-50 transition cursor-pointer"
+                      className="p-1.5 text-[#1c1c1a]/40 hover:text-red-600 transition cursor-pointer"
                     >
                       {isDeleting ? (
                         <div className="w-3.5 h-3.5 border-2 border-red-500 border-t-transparent rounded-full animate-spin" />
@@ -393,7 +408,7 @@ export const InspectionHistory: React.FC<InspectionHistoryProps> = ({
                       )}
                     </button>
 
-                    <div className="p-1 text-slate-400 group-hover:text-blue-600 transition">
+                    <div className="p-1 text-[#1c1c1a]/40 group-hover:text-[#2563eb] transition">
                       <ArrowUpRight className="w-4 h-4" />
                     </div>
                   </div>
@@ -407,35 +422,35 @@ export const InspectionHistory: React.FC<InspectionHistoryProps> = ({
       {/* AS9100 Rev D Audit Void Dialog Modal */}
       {voidRecord && (
         <div
-          className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/50 backdrop-blur-xs p-4"
+          className="fixed inset-0 z-50 flex items-center justify-center bg-[#1c1c1a]/60 backdrop-blur-xs p-4"
           onClick={() => setVoidRecord(null)}
         >
           <div
-            className="bg-white rounded-xl max-w-md w-full p-6 shadow-2xl border border-slate-200 space-y-4"
+            className="bg-white max-w-md w-full p-6 border border-[#1c1c1a]/20 space-y-4"
             onClick={(e) => e.stopPropagation()}
           >
             <div className="flex items-start justify-between gap-3">
               <div className="flex items-center gap-2 text-rose-700">
                 <ShieldAlert className="w-5 h-5" />
-                <h3 className="font-bold text-slate-900 text-base">
+                <h3 className="font-serif-display text-lg font-semibold italic text-[#1c1c1a]">
                   AS9100 Audit Void Record
                 </h3>
               </div>
               <button
                 type="button"
                 onClick={() => setVoidRecord(null)}
-                className="p-1 text-slate-400 hover:text-slate-600 rounded cursor-pointer"
+                className="p-1 text-[#1c1c1a]/40 hover:text-[#1c1c1a] cursor-pointer"
               >
                 <X className="w-4 h-4" />
               </button>
             </div>
 
-            <div className="p-3 bg-amber-50 rounded-lg border border-amber-200 text-amber-900 text-xs leading-relaxed">
+            <div className="p-3 bg-amber-50 border border-amber-200 text-amber-900 text-xs leading-relaxed font-mono-code">
               <span className="font-bold">AS9100 Rev D / ISO 9001 Immutability:</span> Voiding preserves the report in your secure audit journal while tagging it as invalid for production dispatch.
             </div>
 
             <div>
-              <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1">
+              <label className="label-mono block mb-1">
                 Reason for Quality Invalidation:
               </label>
               <textarea
@@ -443,7 +458,7 @@ export const InspectionHistory: React.FC<InspectionHistoryProps> = ({
                 value={voidReason}
                 onChange={(e) => setVoidReason(e.target.value)}
                 placeholder="Specify why this inspection report is being voided..."
-                className="w-full text-xs p-2.5 rounded-lg border border-slate-300 focus:outline-hidden focus:ring-2 focus:ring-rose-500 focus:border-transparent font-medium"
+                className="w-full text-xs p-2.5 border border-[#1c1c1a]/20 focus:border-[#2563eb] outline-none font-medium bg-white"
               />
               <div className="flex flex-wrap gap-1.5 mt-2">
                 <button
@@ -451,7 +466,7 @@ export const InspectionHistory: React.FC<InspectionHistoryProps> = ({
                   onClick={() =>
                     setVoidReason("Superseded by subsequent laser / NDT scan.")
                   }
-                  className="text-[10px] px-2 py-0.5 rounded bg-slate-100 hover:bg-slate-200 text-slate-700 cursor-pointer"
+                  className="font-mono-code text-[10px] px-2 py-0.5 bg-[#fafafa] border border-[#1c1c1a]/15 text-[#1c1c1a] hover:bg-white cursor-pointer"
                 >
                   Superseded
                 </button>
@@ -460,7 +475,7 @@ export const InspectionHistory: React.FC<InspectionHistoryProps> = ({
                   onClick={() =>
                     setVoidReason("Optical artifact due to lighting glare; re-tested OK.")
                   }
-                  className="text-[10px] px-2 py-0.5 rounded bg-slate-100 hover:bg-slate-200 text-slate-700 cursor-pointer"
+                  className="font-mono-code text-[10px] px-2 py-0.5 bg-[#fafafa] border border-[#1c1c1a]/15 text-[#1c1c1a] hover:bg-white cursor-pointer"
                 >
                   Lighting Artifact
                 </button>
@@ -469,19 +484,19 @@ export const InspectionHistory: React.FC<InspectionHistoryProps> = ({
                   onClick={() =>
                     setVoidReason("Engineering disposition overridden per Chief Metallurgist.")
                   }
-                  className="text-[10px] px-2 py-0.5 rounded bg-slate-100 hover:bg-slate-200 text-slate-700 cursor-pointer"
+                  className="font-mono-code text-[10px] px-2 py-0.5 bg-[#fafafa] border border-[#1c1c1a]/15 text-[#1c1c1a] hover:bg-white cursor-pointer"
                 >
                   Chief Metallurgist Override
                 </button>
               </div>
             </div>
 
-            <div className="flex items-center justify-end gap-2 pt-2 border-t border-slate-100">
+            <div className="flex items-center justify-end gap-2 pt-2 border-t border-[#1c1c1a]/10">
               <button
                 type="button"
                 onClick={() => setVoidRecord(null)}
                 disabled={isVoiding}
-                className="px-3.5 py-2 text-xs font-semibold text-slate-600 hover:bg-slate-100 rounded-lg transition cursor-pointer"
+                className="px-3.5 py-2 font-mono-code text-xs text-[#1c1c1a]/70 hover:bg-[#fafafa] cursor-pointer"
               >
                 Cancel
               </button>
@@ -489,7 +504,7 @@ export const InspectionHistory: React.FC<InspectionHistoryProps> = ({
                 type="button"
                 onClick={handleConfirmVoid}
                 disabled={isVoiding || !voidReason.trim()}
-                className="px-4 py-2 text-xs font-bold text-white bg-rose-600 hover:bg-rose-700 rounded-lg shadow-2xs transition flex items-center gap-1.5 cursor-pointer disabled:opacity-50"
+                className="px-4 py-2 font-mono-code text-xs font-semibold text-white bg-rose-700 hover:bg-rose-800 transition flex items-center gap-1.5 cursor-pointer disabled:opacity-50"
               >
                 <Ban className="w-3.5 h-3.5" />
                 <span>{isVoiding ? "Voiding Record..." : "Confirm Quality Void"}</span>
@@ -501,3 +516,4 @@ export const InspectionHistory: React.FC<InspectionHistoryProps> = ({
     </div>
   );
 };
+

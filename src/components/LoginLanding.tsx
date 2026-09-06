@@ -3,14 +3,12 @@ import { signInWithPopup } from "firebase/auth";
 import { auth, googleProvider } from "../firebase/config";
 import {
   FileCheck2,
-  ShieldCheck,
   Cpu,
   Database,
   Lock,
   ArrowRight,
   AlertCircle,
   ScanEye,
-  CheckCircle2,
 } from "lucide-react";
 
 export const LoginLanding: React.FC = () => {
@@ -35,18 +33,18 @@ export const LoginLanding: React.FC = () => {
   return (
     <div className="min-h-[calc(100vh-4rem)] flex flex-col justify-center py-12 px-4 sm:px-6 lg:px-8">
       <div className="max-w-4xl mx-auto w-full">
-        {/* Main Professional Polish Card */}
-        <div className="bg-white border border-slate-200 rounded-2xl p-8 sm:p-12 shadow-xl relative overflow-hidden text-slate-800">
+        {/* Main Editorial Polish Card */}
+        <div className="bg-white border border-[#1c1c1a]/15 p-8 sm:p-12 relative overflow-hidden text-[#1c1c1a]">
           <div className="relative z-10 text-center max-w-2xl mx-auto">
-            <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-blue-50 border border-blue-200 text-blue-700 text-xs font-semibold mb-6">
-              <ScanEye className="w-4 h-4 text-blue-600" />
+            <div className="inline-flex items-center gap-2 px-3 py-1 bg-[#fafafa] border border-[#1c1c1a]/15 text-[#1c1c1a] label-mono mb-6">
+              <ScanEye className="w-3.5 h-3.5 text-[#2563eb]" />
               <span>AS9100 / ISO 9001 Optical Diagnostics</span>
             </div>
 
-            <h1 className="text-3xl sm:text-4xl font-extrabold text-slate-900 tracking-tight">
-              VisionScribe Industrial Inspection Journal
+            <h1 className="font-serif-display text-3xl sm:text-5xl font-semibold italic text-[#1c1c1a] tracking-tight">
+              VisionScribe Inspection Journal
             </h1>
-            <p className="mt-4 text-base sm:text-lg text-slate-600 leading-relaxed">
+            <p className="mt-4 text-sm sm:text-base text-[#1c1c1a]/70 leading-relaxed">
               Automated visual non-destructive evaluation for mechanical parts,
               aerospace components, and industrial machinery. Ingest defect imagery to generate
               rigorous Non-Conformance Reports (NCR) with AI-powered multi-turn engineering consultation.
@@ -54,11 +52,11 @@ export const LoginLanding: React.FC = () => {
 
             {/* Error banner */}
             {authError && (
-              <div className="mt-6 p-4 rounded-xl bg-red-50 border border-red-200 text-red-700 text-xs text-left flex items-start gap-3">
-                <AlertCircle className="w-5 h-5 text-red-500 flex-shrink-0 mt-0.5" />
+              <div className="mt-6 p-4 bg-red-50 border border-red-200 text-red-800 font-mono-code text-xs text-left flex items-start gap-3">
+                <AlertCircle className="w-5 h-5 text-red-600 flex-shrink-0 mt-0.5" />
                 <div>
-                  <div className="font-semibold">Sign-In Notice</div>
-                  <p className="mt-1 text-slate-600">{authError}</p>
+                  <div className="font-bold">Sign-In Notice</div>
+                  <p className="mt-1 text-[#1c1c1a]/70">{authError}</p>
                 </div>
               </div>
             )}
@@ -69,16 +67,16 @@ export const LoginLanding: React.FC = () => {
                 id="btn-google-sign-in"
                 onClick={handleGoogleSignIn}
                 disabled={loading}
-                className="w-full sm:w-auto inline-flex items-center justify-center gap-3 px-8 py-3.5 rounded-xl bg-blue-600 hover:bg-blue-700 text-white font-semibold text-sm transition shadow-md shadow-blue-600/20 disabled:opacity-70 disabled:cursor-not-allowed cursor-pointer"
+                className="w-full sm:w-auto inline-flex items-center justify-center gap-3 px-8 py-3.5 bg-[#1c1c1a] hover:bg-[#1c1c1a]/90 text-white font-mono-code text-xs uppercase tracking-wider transition disabled:opacity-70 disabled:cursor-not-allowed cursor-pointer"
               >
                 {loading ? (
                   <>
-                    <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                    <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
                     <span>Signing in via Google...</span>
                   </>
                 ) : (
                   <>
-                    <svg className="w-5 h-5" viewBox="0 0 24 24">
+                    <svg className="w-4 h-4" viewBox="0 0 24 24">
                       <path
                         fill="#ffffff"
                         d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"
@@ -97,54 +95,54 @@ export const LoginLanding: React.FC = () => {
                       />
                     </svg>
                     <span>Authenticate with Google</span>
-                    <ArrowRight className="w-4 h-4" />
+                    <ArrowRight className="w-3.5 h-3.5 text-[#2563eb]" />
                   </>
                 )}
               </button>
             </div>
 
             {/* Architecture Highlights Grid */}
-            <div className="mt-12 grid grid-cols-1 md:grid-cols-3 gap-4 text-left border-t border-slate-100 pt-8">
-              <div className="p-4 rounded-xl bg-slate-50 border border-slate-200">
-                <div className="w-8 h-8 rounded-lg bg-blue-100 text-blue-600 flex items-center justify-center mb-3">
-                  <FileCheck2 className="w-4 h-4" />
+            <div className="mt-12 grid grid-cols-1 md:grid-cols-3 gap-4 text-left border-t border-[#1c1c1a]/10 pt-8">
+              <div className="p-4 bg-[#fafafa] border border-[#1c1c1a]/10">
+                <div className="w-7 h-7 bg-white border border-[#1c1c1a]/15 text-[#2563eb] flex items-center justify-center mb-3">
+                  <FileCheck2 className="w-3.5 h-3.5" />
                 </div>
-                <h3 className="text-sm font-bold text-slate-900">
+                <h3 className="font-serif-display text-base font-semibold italic text-[#1c1c1a]">
                   Structured NCR Reports
                 </h3>
-                <p className="mt-1 text-xs text-slate-600 leading-normal">
+                <p className="mt-1 text-xs text-[#1c1c1a]/70 leading-normal">
                   Standardized 1-5 severity metric, root cause hypotheses, corrective action plans, and disposition (Scrap/Rework/Repair).
                 </p>
               </div>
 
-              <div className="p-4 rounded-xl bg-slate-50 border border-slate-200">
-                <div className="w-8 h-8 rounded-lg bg-emerald-100 text-emerald-600 flex items-center justify-center mb-3">
-                  <Database className="w-4 h-4" />
+              <div className="p-4 bg-[#fafafa] border border-[#1c1c1a]/10">
+                <div className="w-7 h-7 bg-white border border-[#1c1c1a]/15 text-emerald-700 flex items-center justify-center mb-3">
+                  <Database className="w-3.5 h-3.5" />
                 </div>
-                <h3 className="text-sm font-bold text-slate-900">
+                <h3 className="font-serif-display text-base font-semibold italic text-[#1c1c1a]">
                   Isolated Cloud Firestore
                 </h3>
-                <p className="mt-1 text-xs text-slate-600 leading-normal">
-                  Per-user security isolation at <code className="text-[11px] text-blue-600">/users/&#123;userId&#125;/inspections</code> with zero cross-tenant leakage.
+                <p className="mt-1 text-xs text-[#1c1c1a]/70 leading-normal">
+                  Per-user security isolation at <code className="font-mono-code text-[11px] text-[#2563eb]">/users/&#123;userId&#125;/inspections</code> with zero cross-tenant leakage.
                 </p>
               </div>
 
-              <div className="p-4 rounded-xl bg-slate-50 border border-slate-200">
-                <div className="w-8 h-8 rounded-lg bg-indigo-100 text-indigo-600 flex items-center justify-center mb-3">
-                  <Cpu className="w-4 h-4" />
+              <div className="p-4 bg-[#fafafa] border border-[#1c1c1a]/10">
+                <div className="w-7 h-7 bg-white border border-[#1c1c1a]/15 text-[#2563eb] flex items-center justify-center mb-3">
+                  <Cpu className="w-3.5 h-3.5" />
                 </div>
-                <h3 className="text-sm font-bold text-slate-900">
+                <h3 className="font-serif-display text-base font-semibold italic text-[#1c1c1a]">
                   Resilient Gemini Engine
                 </h3>
-                <p className="mt-1 text-xs text-slate-600 leading-normal">
+                <p className="mt-1 text-xs text-[#1c1c1a]/70 leading-normal">
                   High-capacity multimodal pipeline with automatic multi-model fallback ladder (Gemini 2.5 Flash → 2.0 Flash).
                 </p>
               </div>
             </div>
 
             {/* Security Guarantee */}
-            <div className="mt-8 flex items-center justify-center gap-2 text-xs text-slate-500">
-              <Lock className="w-3.5 h-3.5 text-slate-400" />
+            <div className="mt-8 flex items-center justify-center gap-2 label-mono">
+              <Lock className="w-3.5 h-3.5 text-[#1c1c1a]/40" />
               <span>Zero-hardcoded secrets • Server-side API key proxy • Strict Auth token validation</span>
             </div>
           </div>
@@ -153,3 +151,4 @@ export const LoginLanding: React.FC = () => {
     </div>
   );
 };
+

@@ -421,15 +421,15 @@ export default function App() {
 
   if (authLoading) {
     return (
-      <div className="min-h-screen bg-slate-900 flex flex-col items-center justify-center text-slate-300">
-        <div className="w-10 h-10 border-2 border-blue-500 border-t-transparent rounded-full animate-spin mb-4" />
-        <p className="text-sm font-semibold tracking-wide">Initializing VisionScribe Engine...</p>
+      <div className="min-h-screen bg-[#1c1c1a] flex flex-col items-center justify-center text-white">
+        <div className="w-8 h-8 border-2 border-[#2563eb] border-t-transparent rounded-full animate-spin mb-4" />
+        <p className="font-mono-code text-xs uppercase tracking-widest text-[#f8f7f4]/80">Initializing VisionScribe Engine...</p>
       </div>
     );
   }
 
   return (
-    <div className="flex h-screen w-full bg-slate-50 text-slate-800 overflow-hidden font-sans">
+    <div className="flex h-screen w-full bg-[#f8f7f4] text-[#1c1c1a] overflow-hidden font-sans">
       {/* Sidebar Navigation */}
       <Sidebar
         user={user}
@@ -457,7 +457,7 @@ export default function App() {
         />
 
         {/* Workstation Content Area */}
-        <main className="flex-1 overflow-y-auto p-4 sm:p-6 lg:p-8 bg-slate-50/70">
+        <main className="flex-1 overflow-y-auto p-4 sm:p-6 lg:p-8 bg-[#f8f7f4]">
           <div className="max-w-7xl mx-auto w-full">
             {!user ? (
               <LoginLanding />
@@ -494,19 +494,19 @@ export default function App() {
                   >
                     {/* Active Session Top Toolbar when inspection is active */}
                     {selectedInspection && (
-                      <div className="flex items-center justify-between gap-4 pb-2 border-b border-slate-200">
+                      <div className="flex items-center justify-between gap-4 pb-2 border-b border-[#1c1c1a]/10">
                         <button
                           id="btn-back-to-new-inspection"
                           onClick={handleStartNewInspection}
-                          className="inline-flex items-center gap-2 px-3 py-1.5 rounded-lg bg-white hover:bg-slate-100 text-slate-700 text-xs font-semibold border border-slate-200 transition shadow-2xs cursor-pointer"
+                          className="inline-flex items-center gap-2 px-3 py-1.5 bg-white hover:bg-[#fafafa] text-[#1c1c1a] font-mono-code text-xs uppercase tracking-wider border border-[#1c1c1a]/15 transition cursor-pointer"
                         >
-                          <ArrowLeft className="w-3.5 h-3.5" />
+                          <ArrowLeft className="w-3.5 h-3.5 text-[#2563eb]" />
                           <span>Start Another Inspection</span>
                         </button>
 
-                        <div className="text-xs text-slate-500 font-mono">
+                        <div className="font-mono-code text-xs text-[#1c1c1a]/60">
                           ACTIVE REPORT:{" "}
-                          <span className="text-blue-600 font-bold">
+                          <span className="text-[#2563eb] font-bold">
                             {selectedInspection.ncr.reportNumber}
                           </span>
                         </div>
@@ -514,14 +514,14 @@ export default function App() {
                     )}
 
                     {analysisError && (
-                      <div className="p-4 rounded-xl bg-red-50 border border-red-200 text-red-700 text-xs flex items-center justify-between gap-3 shadow-2xs">
+                      <div className="p-4 bg-red-50 border border-red-200 text-red-800 font-mono-code text-xs flex items-center justify-between gap-3">
                         <div className="flex items-center gap-2">
-                          <AlertCircle className="w-4 h-4 text-red-500 flex-shrink-0" />
+                          <AlertCircle className="w-4 h-4 text-red-600 flex-shrink-0" />
                           <span>{analysisError}</span>
                         </div>
                         <button
                           onClick={() => setAnalysisError(null)}
-                          className="text-red-600 font-semibold hover:underline cursor-pointer text-[11px]"
+                          className="text-red-700 font-bold hover:underline cursor-pointer text-[11px]"
                         >
                           Dismiss
                         </button>

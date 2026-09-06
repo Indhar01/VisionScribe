@@ -2,15 +2,13 @@ import React from "react";
 import { User, signOut } from "firebase/auth";
 import { auth } from "../firebase/config";
 import {
-  PlusCircle,
+  Plus,
   History,
   FileCheck2,
-  ShieldCheck,
   LogOut,
-  Sliders,
   Sparkles,
   Layers,
-  ChevronRight,
+  X,
 } from "lucide-react";
 
 interface SidebarProps {
@@ -57,156 +55,153 @@ export const Sidebar: React.FC<SidebarProps> = ({
   };
 
   const sidebarContent = (
-    <div className="w-64 bg-slate-900 text-slate-300 flex flex-col h-full border-r border-slate-800 shadow-xl select-none">
-      {/* Brand Identity */}
-      <div className="p-6 flex items-center space-x-3 border-b border-slate-850">
-        <div className="w-8 h-8 bg-blue-600 rounded flex items-center justify-center font-bold text-white shadow-sm flex-shrink-0">
-          V
-        </div>
-        <div className="min-w-0 flex-1">
-          <span className="text-xl font-bold tracking-tight text-white block truncate">
-            VisionScribe
-          </span>
-          <span className="text-[10px] text-slate-400 font-medium tracking-wide uppercase">
-            Quality Telemetry
-          </span>
-        </div>
-      </div>
-
-      {/* Navigation Links */}
-      <div className="flex-1 px-4 py-6 space-y-1 overflow-y-auto">
-        <div className="px-3 py-2 text-xs font-semibold text-slate-500 uppercase tracking-wider">
-          Inspection
-        </div>
-
-        <button
-          id="sidebar-btn-new-session"
-          onClick={() => {
-            onNewInspection();
-            if (onCloseMobile) onCloseMobile();
-          }}
-          className={`w-full flex items-center justify-between px-3 py-2.5 rounded-md text-sm font-medium transition-colors cursor-pointer ${
-            activeView === "inspect" && !hasActiveInspection
-              ? "bg-slate-800 text-white font-semibold"
-              : "text-slate-300 hover:bg-slate-800 hover:text-white"
-          }`}
-        >
-          <div className="flex items-center space-x-3">
-            <div className="w-4 h-4 border-2 border-white/80 rounded-sm flex items-center justify-center">
-              <div className="w-1.5 h-1.5 bg-white rounded-xs" />
-            </div>
-            <span>New Session</span>
+    <div className="w-72 bg-[#F8F7F4] text-[#1c1c1a] flex flex-col h-full border-r border-[#1c1c1a]/10 select-none p-6 justify-between">
+      {/* Brand & Section 01 */}
+      <div>
+        <div className="pb-6 mb-6 border-b border-[#1c1c1a]/10 flex items-center justify-between">
+          <div>
+            <h1 className="font-serif-display text-2xl font-bold italic tracking-tight text-[#1c1c1a]">
+              VisionScribe
+            </h1>
+            <span className="label-mono mt-0.5 block">Quality Telemetry</span>
           </div>
-          <PlusCircle className="w-4 h-4 text-slate-400" />
-        </button>
+          {isOpenMobile && (
+            <button
+              onClick={onCloseMobile}
+              className="p-1 rounded hover:bg-[#1c1c1a]/5 text-[#1c1c1a]/70 md:hidden cursor-pointer"
+            >
+              <X className="w-5 h-5" />
+            </button>
+          )}
+        </div>
 
-        {hasActiveInspection && (
+        {/* Navigation Section 01 */}
+        <div className="space-y-1 mb-8">
+          <span className="label-mono mb-2 block">[01] Inspection</span>
+
           <button
-            id="sidebar-btn-active-ncr"
+            id="sidebar-btn-new-session"
             onClick={() => {
-              setActiveView("inspect");
+              onNewInspection();
               if (onCloseMobile) onCloseMobile();
             }}
-            className={`w-full flex items-center justify-between px-3 py-2.5 rounded-md text-sm font-medium transition-colors cursor-pointer ${
-              activeView === "inspect"
-                ? "bg-blue-600/20 text-blue-300 border border-blue-500/30"
-                : "text-slate-300 hover:bg-slate-800"
+            className={`w-full flex items-center justify-between px-3.5 py-2.5 rounded-xs text-xs font-semibold tracking-wide transition cursor-pointer border ${
+              activeView === "inspect" && !hasActiveInspection
+                ? "bg-[#1c1c1a] text-white border-[#1c1c1a]"
+                : "border-transparent text-[#1c1c1a]/80 hover:bg-[#1c1c1a]/5 hover:text-[#1c1c1a]"
             }`}
           >
-            <div className="flex items-center space-x-3">
-              <FileCheck2 className="w-4 h-4 text-blue-400" />
-              <span>Active N.C.R.</span>
-            </div>
-            <div className="w-2 h-2 rounded-full bg-blue-400 animate-pulse" />
+            <span>New Session</span>
+            <Plus className="w-3.5 h-3.5" />
           </button>
-        )}
 
-        <button
-          id="sidebar-btn-history"
-          onClick={() => {
-            setActiveView("history");
-            if (onCloseMobile) onCloseMobile();
-          }}
-          className={`w-full flex items-center justify-between px-3 py-2.5 rounded-md text-sm font-medium transition-colors cursor-pointer ${
-            activeView === "history"
-              ? "bg-slate-800 text-white font-semibold"
-              : "text-slate-300 hover:bg-slate-800 hover:text-white"
-          }`}
-        >
-          <div className="flex items-center space-x-3">
-            <History className="w-4 h-4 text-slate-400" />
-            <span>History Log</span>
-          </div>
-          <span className="text-xs px-2 py-0.5 rounded bg-slate-800 text-slate-400 border border-slate-700">
-            {inspectionsCount}
-          </span>
-        </button>
+          {hasActiveInspection && (
+            <button
+              id="sidebar-btn-active-ncr"
+              onClick={() => {
+                setActiveView("inspect");
+                if (onCloseMobile) onCloseMobile();
+              }}
+              className={`w-full flex items-center justify-between px-3.5 py-2.5 rounded-xs text-xs font-semibold tracking-wide transition cursor-pointer border ${
+                activeView === "inspect"
+                  ? "bg-[#2563eb]/10 text-[#2563eb] border-[#2563eb]/30"
+                  : "border-transparent text-[#1c1c1a]/80 hover:bg-[#1c1c1a]/5"
+              }`}
+            >
+              <div className="flex items-center space-x-2">
+                <FileCheck2 className="w-3.5 h-3.5 text-[#2563eb]" />
+                <span>Active N.C.R.</span>
+              </div>
+              <div className="w-1.5 h-1.5 rounded-full bg-[#2563eb] animate-pulse" />
+            </button>
+          )}
 
-        <div className="pt-6 px-3 py-2 text-xs font-semibold text-slate-500 uppercase tracking-wider">
-          Management
+          <button
+            id="sidebar-btn-history"
+            onClick={() => {
+              setActiveView("history");
+              if (onCloseMobile) onCloseMobile();
+            }}
+            className={`w-full flex items-center justify-between px-3.5 py-2.5 rounded-xs text-xs font-semibold tracking-wide transition cursor-pointer border ${
+              activeView === "history"
+                ? "bg-[#1c1c1a] text-white border-[#1c1c1a]"
+                : "border-transparent text-[#1c1c1a]/80 hover:bg-[#1c1c1a]/5 hover:text-[#1c1c1a]"
+            }`}
+          >
+            <div className="flex items-center space-x-2">
+              <History className="w-3.5 h-3.5" />
+              <span>History Log</span>
+            </div>
+            <span className="font-mono-code text-[10px] px-1.5 py-0.2 rounded-xs bg-[#1c1c1a]/10 text-inherit">
+              {inspectionsCount}
+            </span>
+          </button>
         </div>
 
-        <div className="flex items-center justify-between px-3 py-2.5 rounded-md text-sm text-slate-400 hover:bg-slate-850 transition cursor-default">
-          <div className="flex items-center space-x-3">
-            <Layers className="w-4 h-4 text-slate-500" />
-            <span>AS9100 / ISO 9001</span>
-          </div>
-          <span className="text-[10px] bg-slate-800 text-emerald-400 px-1.5 py-0.5 rounded border border-slate-700">
-            Compliant
-          </span>
-        </div>
+        {/* Navigation Section 02 - Compliance */}
+        <div className="space-y-2">
+          <span className="label-mono mb-2 block">[02] Compliance</span>
 
-        <div className="flex items-center justify-between px-3 py-2.5 rounded-md text-sm text-slate-400 hover:bg-slate-850 transition cursor-default">
-          <div className="flex items-center space-x-3">
-            <Sparkles className="w-4 h-4 text-slate-500" />
-            <span>Gemini Diagnostics</span>
+          <div className="flex items-center justify-between px-3.5 py-2 rounded-xs text-xs text-[#1c1c1a]/70 border border-[#1c1c1a]/8 bg-white/60">
+            <div className="flex items-center space-x-2">
+              <Layers className="w-3.5 h-3.5 text-[#1c1c1a]/50" />
+              <span>AS9100 / ISO 9001</span>
+            </div>
+            <span className="font-mono-code text-[9px] bg-emerald-50 text-emerald-700 px-1.5 py-0.5 rounded-xs border border-emerald-200 uppercase font-semibold">
+              Compliant
+            </span>
           </div>
-          <span className="text-[10px] bg-slate-800 text-blue-400 px-1.5 py-0.5 rounded border border-slate-700">
-            Online
-          </span>
+
+          <div className="flex items-center justify-between px-3.5 py-2 rounded-xs text-xs text-[#1c1c1a]/70 border border-[#1c1c1a]/8 bg-white/60">
+            <div className="flex items-center space-x-2">
+              <Sparkles className="w-3.5 h-3.5 text-[#2563eb]" />
+              <span>Gemini Engine</span>
+            </div>
+            <span className="font-mono-code text-[9px] bg-blue-50 text-[#2563eb] px-1.5 py-0.5 rounded-xs border border-blue-200 uppercase font-semibold">
+              Online
+            </span>
+          </div>
         </div>
       </div>
 
-      {/* User Profile Bar */}
+      {/* User Profile Block */}
       {user ? (
-        <div className="p-4 border-t border-slate-800 bg-slate-950/40">
-          <div className="flex items-center justify-between p-2 rounded-lg bg-slate-800/60 border border-slate-800">
-            <div className="flex items-center space-x-3 min-w-0">
-              {user.photoURL ? (
-                <img
-                  src={user.photoURL}
-                  alt={user.displayName || "Inspector"}
-                  referrerPolicy="no-referrer"
-                  className="w-8 h-8 rounded-full border border-slate-700 object-cover flex-shrink-0"
-                />
-              ) : (
-                <div className="w-8 h-8 rounded-full bg-blue-600 flex items-center justify-center text-white text-xs font-bold flex-shrink-0 shadow-sm">
-                  {getInitials(user.displayName, user.email)}
-                </div>
-              )}
-              <div className="min-w-0 flex-1">
-                <p className="text-xs font-medium text-white truncate">
-                  {user.displayName || user.email?.split("@")[0] || "Quality Inspector"}
-                </p>
-                <p className="text-[10px] text-slate-400 truncate">
-                  {user.email || "Inspector #4029"}
-                </p>
+        <div className="pt-4 border-t border-[#1c1c1a]/10 flex items-center justify-between gap-3">
+          <div className="flex items-center space-x-3 min-w-0 flex-1">
+            {user.photoURL ? (
+              <img
+                src={user.photoURL}
+                alt={user.displayName || "Inspector"}
+                referrerPolicy="no-referrer"
+                className="w-8 h-8 rounded-full border border-[#1c1c1a]/15 object-cover flex-shrink-0"
+              />
+            ) : (
+              <div className="w-8 h-8 rounded-full bg-[#1c1c1a] text-white flex items-center justify-center text-xs font-bold flex-shrink-0">
+                {getInitials(user.displayName, user.email)}
               </div>
+            )}
+            <div className="min-w-0 flex-1">
+              <p className="text-xs font-semibold text-[#1c1c1a] truncate">
+                {user.displayName || user.email?.split("@")[0] || "INSPECTOR"}
+              </p>
+              <p className="font-mono-code text-[10px] text-[#1c1c1a]/60 truncate">
+                {user.email || "inspector@plant.org"}
+              </p>
             </div>
-
-            <button
-              id="btn-sidebar-sign-out"
-              onClick={handleSignOut}
-              title="Sign Out"
-              className="p-1.5 rounded text-slate-400 hover:text-red-400 hover:bg-slate-800 transition cursor-pointer flex-shrink-0"
-            >
-              <LogOut className="w-4 h-4" />
-            </button>
           </div>
+
+          <button
+            id="btn-sidebar-sign-out"
+            onClick={handleSignOut}
+            title="Sign Out"
+            className="p-1.5 rounded text-[#1c1c1a]/60 hover:text-red-600 hover:bg-red-50 transition cursor-pointer flex-shrink-0"
+          >
+            <LogOut className="w-4 h-4" />
+          </button>
         </div>
       ) : (
-        <div className="p-4 border-t border-slate-800 text-xs text-slate-500 text-center">
-          Authentication Required
+        <div className="pt-4 border-t border-[#1c1c1a]/10 text-center">
+          <span className="label-mono">Authentication Required</span>
         </div>
       )}
     </div>
@@ -223,7 +218,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
       {isOpenMobile && (
         <div className="fixed inset-0 z-50 flex md:hidden">
           <div
-            className="fixed inset-0 bg-slate-950/80 backdrop-blur-xs transition-opacity"
+            className="fixed inset-0 bg-[#1c1c1a]/50 backdrop-blur-xs transition-opacity"
             onClick={onCloseMobile}
           />
           <div className="relative z-10 flex h-full">{sidebarContent}</div>
@@ -232,3 +227,4 @@ export const Sidebar: React.FC<SidebarProps> = ({
     </>
   );
 };
+
