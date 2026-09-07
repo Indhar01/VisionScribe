@@ -39,8 +39,7 @@ Built for the **Google Cloud Run AI Ideathon Challenge** (`#AccelerateAIwithClou
 | **Gemini AI reflection: FMEA, root cause, MRB disposition** ![AI Reflection](docs/screenshots/03-ai-reflection-ncr.png) | **Automated 8D NCR — all eight disciplines, MRB sign-off** ![8D NCR](docs/screenshots/06-8d-ncr-report.png) |
 | **Multi-turn engineering copilot chat** ![Copilot](docs/screenshots/04-copilot-chat.png) | **Role-based Supervisor Review Queue — cross-user triage** ![Supervisor Queue](docs/screenshots/07-supervisor-queue.png) |
 
-**Full inspection journal — searchable, filterable, audit-ready:**
-![Inspection Journal](docs/screenshots/05-inspection-journal.png)
+| **Tamper-evident SHA-256 audit trail, zero-trust & Secret Manager posture** ![Audit & Compliance](docs/screenshots/08-audit-compliance.png) | **Full inspection journal — searchable, filterable, audit-ready** ![Inspection Journal](docs/screenshots/05-inspection-journal.png) |
 
 ---
 
